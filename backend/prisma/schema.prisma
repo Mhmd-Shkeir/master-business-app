@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  PROCUREMENT
+}
+
+enum ProjectStatus {
+  RFQ
+  QUOTED
+  ORDERED
+  SHIPPING
+  CLOSED
+}
+
+enum ActivityType {
+  COMMENT
+  UPDATE
+  SYSTEM
+  OVERRIDE
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime   @default(now())
+
+  ownedProjects Project[] @relation("ProjectOwner")
+  activities    Activity[]
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  name         String
+  contactName  String?
+  contactEmail String?
+  country      String?
+  paymentTerms String?
+  createdAt    DateTime  @default(now())
+
+  projects     Project[]
+}
+
+model Supplier {
+  id           String    @id @default(cuid())
+  name         String
+  contactName  String?
+  contactEmail String?
+  country      String?
+  paymentTerms String?
+  createdAt    DateTime  @default(now())
+
+  projects     Project[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  projectName String
+  status      ProjectStatus @default(RFQ)
+
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+
+  supplierId  String?
+  supplier    Supplier?     @relation(fields: [supplierId], references: [id])
+
+  ownerId     String
+  owner       User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  nextAction  String?
+  dueDate     DateTime?
+
+  // Set true only via the Admin shipment-hold override flow; the override event itself
+  // is always logged as an Activity so the audit trail doesn't depend on this flag alone.
+  shipmentHoldOverridden Boolean @default(false)
+
+  createdAt   DateTime      @default(now())
+  lastUpdate  DateTime      @updatedAt
+
+  financial   Financial?
+  expenses    Expense[]
+  activities  Activity[]
+}
+
+model Financial {
+  id               String   @id @default(cuid())
+  projectId        String   @unique
+  project          Project  @relation(fields: [projectId], references: [id])
+
+  estimatedRevenue Decimal  @default(0) @db.Decimal(14, 2)
+  actualRevenue    Decimal  @default(0) @db.Decimal(14, 2)
+  estimatedCost    Decimal  @default(0) @db.Decimal(14, 2)
+  actualCost       Decimal  @default(0) @db.Decimal(14, 2)
+
+  customerPaid     Decimal  @default(0) @db.Decimal(14, 2)
+  supplierPaid     Decimal  @default(0) @db.Decimal(14, 2)
+
+  updatedAt        DateTime @updatedAt
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  category  String
+  amount    Decimal  @db.Decimal(14, 2)
+  note      String?
+
+  createdAt DateTime @default(now())
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id])
+
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id])
+
+  type      ActivityType
+  message   String
+
+  createdAt DateTime     @default(now())
+}
