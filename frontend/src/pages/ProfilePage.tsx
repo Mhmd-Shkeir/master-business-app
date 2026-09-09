@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Avatar } from "../components/Avatar";
 import { useChangePassword } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 
@@ -46,9 +47,7 @@ export function ProfilePage() {
       <h1 className="mb-6 text-lg font-semibold text-neutral-900">My Profile</h1>
 
       <div className="mb-6 flex items-center gap-4 rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-900 text-lg font-semibold text-white">
-          {user?.name?.charAt(0) ?? "?"}
-        </span>
+        <Avatar name={user?.name ?? "?"} size="lg" />
         <div>
           <p className="text-base font-medium text-neutral-900">{user?.name}</p>
           <p className="text-sm text-neutral-500">{user?.email}</p>

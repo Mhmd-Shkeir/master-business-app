@@ -88,6 +88,16 @@ export function CheckCircleIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function LogoutIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M9 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H9" />
+      <path d="M16 16l4-4-4-4" />
+      <path d="M20 12H9" />
+    </Icon>
+  );
+}
+
 export function InboxIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

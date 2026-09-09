@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
 import { useDeleteSupplier, useSuppliers, useUpdateSupplier } from "../hooks/useProjects";
@@ -152,7 +153,8 @@ export function SuppliersPage() {
                   ) : (
                     <>
                       <td className="px-4 py-2">
-                        <Link to={`/suppliers/${s.id}`} className="font-medium text-neutral-900 hover:underline">
+                        <Link to={`/suppliers/${s.id}`} className="flex items-center gap-2 font-medium text-neutral-900 hover:underline">
+                          <Avatar name={s.name} />
                           {s.name}
                         </Link>
                       </td>

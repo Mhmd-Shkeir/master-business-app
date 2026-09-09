@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
 import { useCustomers, useDeleteCustomer, useUpdateCustomer } from "../hooks/useProjects";
@@ -152,7 +153,8 @@ export function CustomersPage() {
                   ) : (
                     <>
                       <td className="px-4 py-2">
-                        <Link to={`/customers/${c.id}`} className="font-medium text-neutral-900 hover:underline">
+                        <Link to={`/customers/${c.id}`} className="flex items-center gap-2 font-medium text-neutral-900 hover:underline">
+                          <Avatar name={c.name} />
                           {c.name}
                         </Link>
                       </td>

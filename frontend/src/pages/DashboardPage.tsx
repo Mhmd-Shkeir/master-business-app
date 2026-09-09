@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { CheckCircleIcon, InboxIcon } from "../components/icons";
 import { Skeleton } from "../components/Skeleton";
@@ -7,7 +8,101 @@ import { useProjects } from "../hooks/useProjects";
 import { groupByCurrency } from "../lib/aggregate";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate } from "../lib/format";
-import type { ProjectSummary } from "../lib/types";
+import type { ProjectStatus, ProjectSummary } from "../lib/types";
+
+const PIPELINE_STAGES: { status: ProjectStatus; bar: string; dot: string }[] = [
+  { status: "RFQ", bar: "bg-slate-400", dot: "bg-slate-400" },
+  { status: "QUOTED", bar: "bg-blue-500", dot: "bg-blue-500" },
+  { status: "ORDERED", bar: "bg-violet-500", dot: "bg-violet-500" },
+  { status: "SHIPPING", bar: "bg-amber-500", dot: "bg-amber-500" },
+  { status: "CLOSED", bar: "bg-emerald-500", dot: "bg-emerald-500" },
+];
+
+function ProjectPipeline({ projects }: { projects: ProjectSummary[] }) {
+  const total = projects.length;
+  const segments = PIPELINE_STAGES.map((s) => ({
+    ...s,
+    count: projects.filter((p) => p.status === s.status).length,
+  }));
+
+  return (
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Pipeline</h2>
+        <span className="text-xs text-neutral-400">{total} total projects</span>
+      </div>
+      {total === 0 ? (
+        <p className="text-sm text-neutral-400">No projects yet.</p>
+      ) : (
+        <>
+          <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-neutral-100">
+            {segments
+              .filter((s) => s.count > 0)
+              .map((s) => (
+                <div key={s.status} className={s.bar} style={{ width: `${(s.count / total) * 100}%` }} />
+              ))}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {segments.map((s) => (
+              <span key={s.status} className="flex items-center gap-1.5 text-xs text-neutral-500">
+                <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                {s.status.charAt(0) + s.status.slice(1).toLowerCase()} <span className="font-medium text-neutral-700">{s.count}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
+  const withMargin = projects.filter((p) => p.financial?.marginPercent != null);
+  const total = withMargin.length;
+  const buckets = [
+    {
+      label: "Healthy ≥25%",
+      bar: "bg-emerald-500",
+      count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) >= 25).length,
+    },
+    {
+      label: "Moderate 20–25%",
+      bar: "bg-amber-500",
+      count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) >= 20 && (p.financial!.marginPercent ?? 0) < 25)
+        .length,
+    },
+    {
+      label: "Low <20%",
+      bar: "bg-red-500",
+      count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) < 20).length,
+    },
+  ];
+  const avg = total > 0 ? withMargin.reduce((sum, p) => sum + (p.financial!.marginPercent ?? 0), 0) / total : 0;
+
+  return (
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Margin Health</h2>
+        {total > 0 && <span className="text-xs text-neutral-400">{avg.toFixed(1)}% avg</span>}
+      </div>
+      {total === 0 ? (
+        <p className="text-sm text-neutral-400">No margin data yet.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {buckets.map((b) => (
+            <div key={b.label} className="flex items-center gap-3 text-xs">
+              <span className="w-32 shrink-0 text-neutral-500">{b.label}</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                <div className={`h-full rounded-full ${b.bar}`} style={{ width: `${(b.count / total) * 100}%` }} />
+              </div>
+              <span className="w-4 shrink-0 text-right font-medium text-neutral-700">{b.count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AttentionBadges({ project }: { project: ProjectSummary }) {
   const badges: { label: string; className: string }[] = [];
@@ -130,6 +225,13 @@ export function DashboardPage() {
         </section>
       )}
 
+      {!isLoading && active.length > 0 && (
+        <section className={`mb-8 grid grid-cols-1 gap-4 ${user?.role === "ADMIN" ? "lg:grid-cols-2" : ""}`}>
+          <ProjectPipeline projects={active} />
+          {user?.role === "ADMIN" && <MarginHealth projects={active} />}
+        </section>
+      )}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
@@ -148,11 +250,16 @@ export function DashboardPage() {
                 className="flex items-center justify-between rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
-                  <StatusBadge status={p.status} />
+                  <Avatar name={p.customer?.name ?? p.projectName} />
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">{p.projectName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-neutral-900">{p.projectName}</p>
+                      <StatusBadge status={p.status} />
+                    </div>
                     <p className="text-xs text-neutral-500">
                       {p.customer?.name} · Due {formatDate(p.dueDate)}
+                      {(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost) != null &&
+                        ` · ${formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)}`}
                     </p>
                   </div>
                 </div>
@@ -179,20 +286,21 @@ export function DashboardPage() {
                 <th className="px-4 py-2.5">Status</th>
                 <th className="px-4 py-2.5">Owner</th>
                 <th className="px-4 py-2.5">Due</th>
+                <th className="px-4 py-2.5 text-right">Value</th>
               </tr>
             </thead>
             <tbody>
               {isLoading &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i} className="border-t border-neutral-100">
-                    <td className="px-4 py-3" colSpan={5}>
+                    <td className="px-4 py-3" colSpan={6}>
                       <Skeleton className="h-4 w-full max-w-sm" />
                     </td>
                   </tr>
                 ))}
               {recent.length === 0 && !isLoading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-neutral-400">
+                  <td colSpan={6} className="px-4 py-8 text-center text-neutral-400">
                     <div className="flex flex-col items-center gap-2">
                       <InboxIcon className="h-5 w-5 text-neutral-300" />
                       No projects found.
@@ -207,12 +315,22 @@ export function DashboardPage() {
                       {p.projectName}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 text-neutral-600">{p.customer?.name ?? "—"}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2 text-neutral-600">
+                      {p.customer?.name && <Avatar name={p.customer.name} />}
+                      {p.customer?.name ?? "—"}
+                    </div>
+                  </td>
                   <td className="px-4 py-2.5">
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 py-2.5 text-neutral-600">{p.owner?.name ?? "—"}</td>
                   <td className="px-4 py-2.5 text-neutral-600">{formatDate(p.dueDate)}</td>
+                  <td className="px-4 py-2.5 text-right text-neutral-600">
+                    {p.financial?.estimatedRevenue != null || p.financial?.estimatedCost != null
+                      ? formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)
+                      : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

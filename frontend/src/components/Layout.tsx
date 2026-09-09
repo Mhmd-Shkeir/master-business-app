@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
-import { CustomersIcon, DashboardIcon, PaymentsIcon, ProjectsIcon, ShieldIcon, SuppliersIcon } from "./icons";
+import { Avatar } from "./Avatar";
+import { CustomersIcon, DashboardIcon, LogoutIcon, PaymentsIcon, ProjectsIcon, ShieldIcon, SuppliersIcon } from "./icons";
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin",
@@ -9,24 +10,29 @@ const ROLE_LABEL: Record<string, string> = {
   PROCUREMENT: "Procurement",
 };
 
-const ROLE_BADGE: Record<string, string> = {
-  ADMIN: "bg-violet-50 text-violet-700",
-  SALES: "bg-blue-50 text-blue-700",
-  PROCUREMENT: "bg-amber-50 text-amber-700",
-};
-
-function NavLink({ to, icon, children }: { to: string; icon: ReactNode; children: ReactNode }) {
+function NavLink({
+  to,
+  icon,
+  collapsed,
+  children,
+}: {
+  to: string;
+  icon: ReactNode;
+  collapsed: boolean;
+  children: string;
+}) {
   const location = useLocation();
   const active = to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
   return (
     <Link
       to={to}
-      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
-        active ? "bg-neutral-100 text-neutral-900" : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-      }`}
+      title={collapsed ? children : undefined}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        active ? "bg-blue-600 text-white shadow-sm" : "text-neutral-400 hover:bg-white/5 hover:text-white"
+      } ${collapsed ? "justify-center" : ""}`}
     >
-      <span className={active ? "text-neutral-700" : "text-neutral-400"}>{icon}</span>
-      {children}
+      <span className="shrink-0">{icon}</span>
+      {!collapsed && <span className="whitespace-nowrap">{children}</span>}
     </Link>
   );
 }
@@ -34,89 +40,135 @@ function NavLink({ to, icon, children }: { to: string; icon: ReactNode; children
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const iconClass = "h-4 w-4";
+  const [collapsed, setCollapsed] = useState(false);
+  const iconClass = "h-5 w-5";
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-50">
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/85 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <Link to="/" className="flex shrink-0 items-center gap-2.5">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-neutral-800 to-neutral-950 text-sm font-bold text-white shadow-sm">
-                M
+    <div className="flex min-h-screen bg-neutral-50">
+      <aside
+        className={`flex shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 transition-[width] duration-150 ${
+          collapsed ? "w-[68px]" : "w-64"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 px-4 py-4">
+          <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white shadow-sm">
+              M
+            </span>
+            {!collapsed && (
+              <span className="whitespace-nowrap leading-tight">
+                <span className="block text-sm font-semibold text-white">Master Business</span>
+                <span className="block text-xs text-neutral-500">Management</span>
               </span>
-              <span className="hidden whitespace-nowrap text-sm font-semibold tracking-tight text-neutral-900 lg:inline">
-                Master Business Management
-              </span>
-            </Link>
-            <span className="hidden h-6 w-px shrink-0 bg-neutral-200 lg:inline-block" />
-            <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto sm:gap-1">
-              <NavLink to="/" icon={<DashboardIcon className={iconClass} />}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/projects" icon={<ProjectsIcon className={iconClass} />}>
-                Projects
-              </NavLink>
-              {(user?.role === "ADMIN" || user?.role === "SALES") && (
-                <NavLink to="/customers" icon={<CustomersIcon className={iconClass} />}>
-                  Customers
-                </NavLink>
-              )}
-              {(user?.role === "ADMIN" || user?.role === "PROCUREMENT") && (
-                <NavLink to="/suppliers" icon={<SuppliersIcon className={iconClass} />}>
-                  Suppliers
-                </NavLink>
-              )}
-              <NavLink to="/payments" icon={<PaymentsIcon className={iconClass} />}>
-                Payments
-              </NavLink>
-              {user?.role === "ADMIN" && (
-                <NavLink to="/users" icon={<ShieldIcon className={iconClass} />}>
-                  Users
-                </NavLink>
-              )}
-            </nav>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Link
-              to="/profile"
-              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-50"
-            >
-              <span className="hidden sm:inline">{user?.name}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ROLE_BADGE[user?.role ?? ""] ?? "bg-neutral-100 text-neutral-700"}`}
-              >
-                {ROLE_LABEL[user?.role ?? ""]}
-              </span>
-            </Link>
+            )}
+          </Link>
+          {!collapsed && (
             <button
               type="button"
-              onClick={() => {
-                logout();
-                navigate("/login");
-              }}
-              className="shrink-0 whitespace-nowrap rounded-md px-2 py-1 text-sm text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
+              onClick={() => setCollapsed(true)}
+              aria-label="Collapse sidebar"
+              className="shrink-0 rounded-md p-1 text-neutral-500 hover:bg-white/5 hover:text-white"
             >
-              Log out
+              «
             </button>
+          )}
+        </div>
+        {collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            aria-label="Expand sidebar"
+            className="mx-auto mb-1 rounded-md p-1 text-neutral-500 hover:bg-white/5 hover:text-white"
+          >
+            »
+          </button>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          {!collapsed && (
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+              Operations
+            </p>
+          )}
+          <nav className="space-y-0.5">
+            <NavLink to="/" icon={<DashboardIcon className={iconClass} />} collapsed={collapsed}>
+              Dashboard
+            </NavLink>
+            <NavLink to="/projects" icon={<ProjectsIcon className={iconClass} />} collapsed={collapsed}>
+              Projects
+            </NavLink>
+            {(user?.role === "ADMIN" || user?.role === "SALES") && (
+              <NavLink to="/customers" icon={<CustomersIcon className={iconClass} />} collapsed={collapsed}>
+                Customers
+              </NavLink>
+            )}
+            {(user?.role === "ADMIN" || user?.role === "PROCUREMENT") && (
+              <NavLink to="/suppliers" icon={<SuppliersIcon className={iconClass} />} collapsed={collapsed}>
+                Suppliers
+              </NavLink>
+            )}
+            <NavLink to="/payments" icon={<PaymentsIcon className={iconClass} />} collapsed={collapsed}>
+              Payments
+            </NavLink>
+            {user?.role === "ADMIN" && (
+              <NavLink to="/users" icon={<ShieldIcon className={iconClass} />} collapsed={collapsed}>
+                Users
+              </NavLink>
+            )}
+          </nav>
+        </div>
+
+        <div className="border-t border-neutral-800 p-3">
+          <Link
+            to="/profile"
+            className={`flex items-center gap-2.5 rounded-lg p-2 hover:bg-white/5 ${collapsed ? "justify-center" : ""}`}
+          >
+            <Avatar name={user?.name ?? "?"} size="sm" />
+            {!collapsed && (
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-white">{user?.name}</span>
+                <span className="block text-xs text-neutral-500">{ROLE_LABEL[user?.role ?? ""]}</span>
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out"
+            className={`mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-500 hover:bg-white/5 hover:text-white ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <LogoutIcon className="h-3.5 w-3.5 shrink-0" />
+            {!collapsed && "Log out"}
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="flex-1">{children}</main>
+        <footer className="border-t border-neutral-200 bg-white">
+          <div className="flex flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">
+            <p className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span>&copy; {new Date().getFullYear()} Master Business Management</span>
+              <span className="text-neutral-300">·</span>
+              <span>Version 1.0</span>
+              <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                Internal
+              </span>
+            </p>
+            <p>
+              Signed in as <span className="font-medium text-neutral-600">{user?.name}</span>{" "}
+              <span className="text-neutral-300">·</span> {ROLE_LABEL[user?.role ?? ""]}
+            </p>
           </div>
-        </div>
-      </header>
-
-      <main className="flex-1">{children}</main>
-
-      <footer className="border-t border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">
-          <p>&copy; {new Date().getFullYear()} Master Business Management. Internal operations platform.</p>
-          <p className="flex items-center gap-1.5">
-            Signed in as <span className="font-medium text-neutral-600">{user?.name}</span>
-            <span aria-hidden className="text-neutral-300">
-              ·
-            </span>
-            {ROLE_LABEL[user?.role ?? ""]}
-          </p>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

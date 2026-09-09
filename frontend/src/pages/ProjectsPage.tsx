@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
 import { useProjects } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
-import { formatDate } from "../lib/format";
+import { formatCurrency, formatDate } from "../lib/format";
 import type { ProjectStatus } from "../lib/types";
 
 const STATUS_OPTIONS: (ProjectStatus | "ALL")[] = ["ALL", "RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
@@ -70,12 +71,13 @@ export function ProjectsPage() {
               <th className="px-4 py-2.5">Status</th>
               <th className="px-4 py-2.5">Owner</th>
               <th className="px-4 py-2.5">Due</th>
+              <th className="px-4 py-2.5 text-right">Value</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && !isLoading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={6} className="px-4 py-8 text-center text-neutral-400">
                   <div className="flex flex-col items-center gap-2">
                     <InboxIcon className="h-5 w-5 text-neutral-300" />
                     No projects found.
@@ -90,12 +92,22 @@ export function ProjectsPage() {
                     {p.projectName}
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 text-neutral-600">{p.customer?.name ?? "—"}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-2 text-neutral-600">
+                    {p.customer?.name && <Avatar name={p.customer.name} />}
+                    {p.customer?.name ?? "—"}
+                  </div>
+                </td>
                 <td className="px-4 py-2.5">
                   <StatusBadge status={p.status} />
                 </td>
                 <td className="px-4 py-2.5 text-neutral-600">{p.owner?.name ?? "—"}</td>
                 <td className="px-4 py-2.5 text-neutral-600">{formatDate(p.dueDate)}</td>
+                <td className="px-4 py-2.5 text-right text-neutral-600">
+                  {p.financial?.estimatedRevenue != null || p.financial?.estimatedCost != null
+                    ? formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)
+                    : "—"}
+                </td>
               </tr>
             ))}
           </tbody>
