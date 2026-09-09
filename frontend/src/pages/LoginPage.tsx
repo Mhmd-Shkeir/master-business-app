@@ -34,9 +34,17 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50">
-      <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-xl font-semibold text-neutral-900">Sign in</h1>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-neutral-50 to-neutral-100 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-200/70 bg-white p-8 shadow-lg shadow-neutral-200/50">
+        <div className="mb-6 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-sm font-bold text-white">
+            M
+          </span>
+          <div>
+            <h1 className="text-base font-semibold leading-tight text-neutral-900">Master Business Management</h1>
+            <p className="text-xs text-neutral-400">Sign in to continue</p>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm text-neutral-600">Email</label>
@@ -64,7 +72,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>

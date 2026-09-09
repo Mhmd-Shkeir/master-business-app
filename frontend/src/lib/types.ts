@@ -19,6 +19,7 @@ export interface Financial {
   supplierPaid?: number;
   supplierBalance?: number;
   marginPercent?: number | null;
+  currency?: string;
 }
 
 export interface NeedsAttention {
@@ -35,6 +36,7 @@ export interface ProjectSummary {
   status: ProjectStatus;
   nextAction: string | null;
   dueDate: string | null;
+  description: string | null;
   lastUpdate: string;
   createdAt: string;
   owner: { id: string; name: string } | null;
@@ -60,11 +62,19 @@ export interface ProjectDetail extends ProjectSummary {
 export interface Customer {
   id: string;
   name: string;
+  contactName: string | null;
+  contactEmail: string | null;
   country: string | null;
+  paymentTerms: string | null;
+  createdAt: string;
 }
 
 export interface Supplier {
   id: string;
   name: string;
+  contactName: string | null;
+  contactEmail: string | null;
   country: string | null;
+  paymentTerms: string | null;
+  createdAt: string;
 }

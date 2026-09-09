@@ -6,6 +6,7 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { customersRouter } from "./modules/customers/customers.routes";
 import { suppliersRouter } from "./modules/suppliers/suppliers.routes";
 import { projectsRouter } from "./modules/projects/projects.routes";
+import { usersRouter } from "./modules/users/users.routes";
 
 export const app = express();
 
@@ -26,6 +27,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/suppliers", suppliersRouter);
 app.use("/api/projects", projectsRouter);
+app.use("/api/users", usersRouter);
 
 // Catch-all error handler. express-async-errors forwards thrown/rejected
 // errors from async route handlers here instead of crashing the process.

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { computeFinancials, filterFinancialsForRole } from "../../lib/rbac";
 import { authenticate, requireRole, type AuthUser } from "../../middleware/auth";
-import { AppError, overrideShipmentHold, transitionProjectStatus } from "./projects.service";
+import { AppError, overrideShipmentHold, recordPayment, transitionProjectStatus, updateProject } from "./projects.service";
 
 export const projectsRouter = Router();
 projectsRouter.use(authenticate);
@@ -47,6 +47,7 @@ function serializeProject(
     status: project.status,
     nextAction: project.nextAction,
     dueDate: project.dueDate,
+    description: project.description,
     lastUpdate: project.lastUpdate,
     createdAt: project.createdAt,
     owner: project.owner ? { id: project.owner.id, name: project.owner.name } : null,
@@ -103,12 +104,12 @@ projectsRouter.get("/:id", async (req, res) => {
 const createProjectSchema = z.object({
   projectName: z.string().min(1),
   customerId: z.string().min(1),
-  supplierId: z.string().optional(),
   nextAction: z.string().optional(),
   dueDate: z.coerce.date().optional(),
-  estimatedRevenue: z.coerce.number().default(0),
-  estimatedCost: z.coerce.number().default(0),
-});
+  description: z.string().optional(),
+  estimatedRevenue: z.coerce.number().nonnegative().default(0),
+  currency: z.enum(["USD", "EUR", "LBP"]).default("USD"),
+}).strict();
 
 // RFQ intake — Sales owns creation; Admin can also create directly.
 projectsRouter.post("/", requireRole("ADMIN", "SALES"), async (req, res) => {
@@ -122,17 +123,51 @@ projectsRouter.post("/", requireRole("ADMIN", "SALES"), async (req, res) => {
     data: {
       projectName: data.projectName,
       customerId: data.customerId,
-      supplierId: data.supplierId,
       ownerId: req.user!.id,
       nextAction: data.nextAction,
       dueDate: data.dueDate,
-      financial: { create: { estimatedRevenue: data.estimatedRevenue, estimatedCost: data.estimatedCost } },
+      description: data.description,
+      financial: { create: { estimatedRevenue: data.estimatedRevenue, currency: data.currency } },
       activities: { create: { type: "SYSTEM", message: "Project created.", userId: req.user!.id } },
     },
     include: { financial: true, customer: true, supplier: true, owner: true },
   });
 
   res.status(201).json(serializeProject(project, req.user!.role));
+});
+
+const editProjectSchema = z
+  .object({
+    projectName: z.string().min(1).optional(),
+    nextAction: z.string().nullable().optional(),
+    dueDate: z.coerce.date().nullable().optional(),
+    description: z.string().nullable().optional(),
+    supplierId: z.string().min(1).nullable().optional(),
+    estimatedRevenue: z.coerce.number().nonnegative().optional(),
+    actualRevenue: z.coerce.number().nonnegative().optional(),
+    customerPaid: z.coerce.number().nonnegative().optional(),
+    estimatedCost: z.coerce.number().nonnegative().optional(),
+    actualCost: z.coerce.number().nonnegative().optional(),
+    supplierPaid: z.coerce.number().nonnegative().optional(),
+    currency: z.enum(["USD", "EUR", "LBP"]).optional(),
+  })
+  .strict()
+  .refine((d) => Object.keys(d).length > 0, { message: "No fields provided" });
+
+projectsRouter.patch("/:id", async (req, res) => {
+  const parsed = editProjectSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+  }
+  try {
+    const updated = await updateProject(req.params.id, parsed.data, req.user!);
+    res.json(serializeProject(updated, req.user!.role));
+  } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    throw err;
+  }
 });
 
 const statusSchema = z.object({
@@ -167,6 +202,36 @@ projectsRouter.post("/:id/override-hold", requireRole("ADMIN"), async (req, res)
   try {
     const updated = await overrideShipmentHold(req.params.id, req.user!, parsed.data.reason);
     res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    throw err;
+  }
+});
+
+const recordPaymentSchema = z
+  .object({
+    side: z.enum(["customer", "supplier"]),
+    amount: z.coerce.number().positive(),
+    note: z.string().optional(),
+  })
+  .strict();
+
+projectsRouter.post("/:id/payment", async (req, res) => {
+  const parsed = recordPaymentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+  }
+  try {
+    const updated = await recordPayment(
+      req.params.id,
+      parsed.data.side,
+      parsed.data.amount,
+      parsed.data.note,
+      req.user!,
+    );
+    res.json(serializeProject(updated, req.user!.role));
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });

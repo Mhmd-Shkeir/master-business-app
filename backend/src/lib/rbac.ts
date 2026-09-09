@@ -25,6 +25,7 @@ interface FinancialLike {
   actualCost: unknown;
   customerPaid: unknown;
   supplierPaid: unknown;
+  currency: unknown;
 }
 
 /** Computed, role-independent business figures. Callers filter visibility after. */
@@ -47,6 +48,7 @@ export function computeFinancials(f: FinancialLike | null | undefined) {
     marginPercent: margin,
     customerBalance,
     supplierBalance,
+    currency: f.currency,
   };
 }
 
@@ -57,6 +59,10 @@ export function filterFinancialsForRole(
   if (!financials) return null;
 
   const result: Record<string, unknown> = {};
+
+  // Currency is metadata about the amounts, not a sensitive amount itself —
+  // visible to every role regardless of revenue/cost gating.
+  result.currency = financials.currency;
 
   if (canSeeRevenue(role)) {
     result.estimatedRevenue = financials.estimatedRevenue;

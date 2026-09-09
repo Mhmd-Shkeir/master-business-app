@@ -24,10 +24,27 @@ export function useCustomers() {
   });
 }
 
-export function useSuppliers() {
+export function useSuppliers(enabled: boolean = true) {
   return useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => (await api.get<Supplier[]>("/suppliers")).data,
+    enabled,
+  });
+}
+
+export function useCustomer(id: string | undefined) {
+  return useQuery({
+    queryKey: ["customers", id],
+    queryFn: async () => (await api.get<Customer>(`/customers/${id}`)).data,
+    enabled: Boolean(id),
+  });
+}
+
+export function useSupplier(id: string | undefined) {
+  return useQuery({
+    queryKey: ["suppliers", id],
+    queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
+    enabled: Boolean(id),
   });
 }
 
@@ -37,11 +54,11 @@ export function useCreateProject() {
     mutationFn: async (data: {
       projectName: string;
       customerId: string;
-      supplierId?: string;
       nextAction?: string;
       dueDate?: string;
+      description?: string;
       estimatedRevenue?: number;
-      estimatedCost?: number;
+      currency?: string;
     }) => (await api.post("/projects", data)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
   });
@@ -70,3 +87,80 @@ export function useOverrideHold(projectId: string) {
     },
   });
 }
+
+export interface ProjectEditPatch {
+  projectName?: string;
+  nextAction?: string | null;
+  dueDate?: string | null;
+  description?: string | null;
+  supplierId?: string | null;
+  estimatedRevenue?: number;
+  actualRevenue?: number;
+  customerPaid?: number;
+  estimatedCost?: number;
+  actualCost?: number;
+  supplierPaid?: number;
+  currency?: string;
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: ProjectEditPatch) => (await api.patch(`/projects/${projectId}`, data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+    },
+  });
+}
+
+export function useRecordPayment(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { side: "customer" | "supplier"; amount: number; note?: string }) =>
+      (await api.post(`/projects/${projectId}/payment`, data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+    },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) =>
+      (await api.patch("/auth/password", data)).data,
+  });
+}
+
+type EntityKind = "customers" | "suppliers";
+
+function useUpdateEntity(kind: EntityKind) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      (await api.patch(`/${kind}/${id}`, data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [kind] });
+      // Projects embed a slim {id, name, country} snapshot of their customer/supplier,
+      // so a rename here would otherwise go stale in any already-cached project view.
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+function useDeleteEntity(kind: EntityKind) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => (await api.delete(`/${kind}/${id}`)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [kind] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export const useUpdateCustomer = () => useUpdateEntity("customers");
+export const useDeleteCustomer = () => useDeleteEntity("customers");
+export const useUpdateSupplier = () => useUpdateEntity("suppliers");
+export const useDeleteSupplier = () => useDeleteEntity("suppliers");

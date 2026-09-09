@@ -1,6 +1,6 @@
 import { ProjectStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { computeFinancials } from "../../lib/rbac";
+import { canSeeCost, canSeeRevenue, computeFinancials } from "../../lib/rbac";
 import type { AuthUser } from "../../middleware/auth";
 
 export class AppError extends Error {
@@ -50,6 +50,39 @@ export async function transitionProjectStatus(
   }
   if (user.role !== "ADMIN" && targetIndex !== currentIndex + 1) {
     throw new AppError("Only Admin may skip workflow stages; move one stage at a time", 403);
+  }
+
+  // Business-data completeness: every stage strictly between current and target must be
+  // satisfied, not just the immediate next one — otherwise an Admin skip could bypass these.
+  for (let i = currentIndex + 1; i <= targetIndex; i++) {
+    const stage = WORKFLOW_ORDER[i];
+    if (stage === "QUOTED") {
+      const revenue = Math.max(
+        Number(project.financial?.actualRevenue ?? 0),
+        Number(project.financial?.estimatedRevenue ?? 0),
+      );
+      if (revenue <= 0) {
+        throw new AppError(
+          `Cannot move to ${targetStatus}: a quote requires an estimated (or actual) revenue greater than 0`,
+          400,
+        );
+      }
+    }
+    if (stage === "ORDERED") {
+      if (!project.supplierId) {
+        throw new AppError(`Cannot move to ${targetStatus}: an order requires a supplier to be assigned`, 400);
+      }
+      const cost = Math.max(
+        Number(project.financial?.actualCost ?? 0),
+        Number(project.financial?.estimatedCost ?? 0),
+      );
+      if (cost <= 0) {
+        throw new AppError(
+          `Cannot move to ${targetStatus}: an order requires an estimated (or actual) cost greater than 0`,
+          400,
+        );
+      }
+    }
   }
 
   if (targetStatus === "CLOSED") {
@@ -125,4 +158,203 @@ export async function overrideShipmentHold(projectId: string, user: AuthUser, re
   });
 
   return updated;
+}
+
+export interface ProjectUpdateInput {
+  projectName?: string;
+  nextAction?: string | null;
+  dueDate?: Date | null;
+  description?: string | null;
+  supplierId?: string | null;
+  estimatedRevenue?: number;
+  actualRevenue?: number;
+  customerPaid?: number;
+  estimatedCost?: number;
+  actualCost?: number;
+  supplierPaid?: number;
+  currency?: "USD" | "EUR" | "LBP";
+}
+
+const REVENUE_FIELDS = ["estimatedRevenue", "actualRevenue", "customerPaid"] as const;
+const COST_FIELDS = ["estimatedCost", "actualCost", "supplierPaid"] as const;
+const FIELD_LABELS: Record<string, string> = {
+  estimatedRevenue: "Estimated revenue",
+  actualRevenue: "Actual revenue",
+  customerPaid: "Customer paid",
+  estimatedCost: "Estimated cost",
+  actualCost: "Actual cost",
+  supplierPaid: "Supplier paid",
+};
+
+/**
+ * Edit permission mirrors field visibility: if a role can see a figure
+ * (lib/rbac.ts), it can edit it — Sales owns the customer side, Procurement
+ * owns the supplier side. Fields the caller can't touch are silently dropped
+ * rather than rejected; a body with nothing the caller was allowed to touch
+ * is a genuine 403. A no-op patch (nothing actually changed) skips the
+ * Activity write — nothing to audit.
+ */
+export async function updateProject(projectId: string, patch: ProjectUpdateInput, user: AuthUser) {
+  const project = await getProjectWithFinancial(projectId);
+
+  const projectData: Record<string, unknown> = {};
+  const financialData: Record<string, unknown> = {};
+  const changes: string[] = [];
+  let anyPermittedFieldProvided = false;
+
+  if (patch.projectName !== undefined) {
+    anyPermittedFieldProvided = true;
+    if (patch.projectName !== project.projectName) {
+      changes.push(`Project name changed from "${project.projectName}" to "${patch.projectName}".`);
+      projectData.projectName = patch.projectName;
+    }
+  }
+  if (patch.nextAction !== undefined) {
+    anyPermittedFieldProvided = true;
+    if (patch.nextAction !== project.nextAction) {
+      changes.push(`Next action updated to "${patch.nextAction ?? "—"}".`);
+      projectData.nextAction = patch.nextAction;
+    }
+  }
+  if (patch.dueDate !== undefined) {
+    anyPermittedFieldProvided = true;
+    const changed = (patch.dueDate?.getTime() ?? null) !== (project.dueDate?.getTime() ?? null);
+    if (changed) {
+      changes.push(`Due date updated to ${patch.dueDate ? patch.dueDate.toISOString().slice(0, 10) : "—"}.`);
+      projectData.dueDate = patch.dueDate;
+    }
+  }
+  if (patch.description !== undefined) {
+    anyPermittedFieldProvided = true;
+    if (patch.description !== project.description) {
+      changes.push("Description updated.");
+      projectData.description = patch.description;
+    }
+  }
+  // Supplier assignment is a Procurement-owned action — gate with canSeeCost
+  // (ADMIN + PROCUREMENT), the same rule already used for cost-side visibility.
+  if (patch.supplierId !== undefined && canSeeCost(user.role)) {
+    anyPermittedFieldProvided = true;
+    if (patch.supplierId !== project.supplierId) {
+      changes.push(project.supplierId ? "Supplier reassigned." : "Supplier assigned.");
+      projectData.supplierId = patch.supplierId;
+    }
+  }
+
+  for (const field of REVENUE_FIELDS) {
+    if (patch[field] === undefined || !canSeeRevenue(user.role)) continue;
+    anyPermittedFieldProvided = true;
+    const current = Number(project.financial?.[field] ?? 0);
+    if (patch[field] !== current) {
+      changes.push(`${FIELD_LABELS[field]} updated to ${patch[field]!.toFixed(2)}.`);
+      financialData[field] = patch[field];
+    }
+  }
+  for (const field of COST_FIELDS) {
+    if (patch[field] === undefined || !canSeeCost(user.role)) continue;
+    anyPermittedFieldProvided = true;
+    const current = Number(project.financial?.[field] ?? 0);
+    if (patch[field] !== current) {
+      changes.push(`${FIELD_LABELS[field]} updated to ${patch[field]!.toFixed(2)}.`);
+      financialData[field] = patch[field];
+    }
+  }
+
+  // Currency is metadata, not a sensitive amount — open to every role,
+  // deliberately not folded into REVENUE_FIELDS/COST_FIELDS above since
+  // those are gated by canSeeRevenue/canSeeCost and this must not be.
+  if (patch.currency !== undefined) {
+    anyPermittedFieldProvided = true;
+    if (patch.currency !== project.financial?.currency) {
+      changes.push(`Currency changed to ${patch.currency}.`);
+      financialData.currency = patch.currency;
+    }
+  }
+
+  if (!anyPermittedFieldProvided) {
+    throw new AppError("None of the submitted fields are editable by your role", 403);
+  }
+  if (changes.length === 0) {
+    return prisma.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true, customer: true, supplier: true, owner: true },
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(projectData).length > 0) {
+      await tx.project.update({ where: { id: projectId }, data: projectData });
+    }
+    if (Object.keys(financialData).length > 0) {
+      await tx.financial.update({ where: { projectId }, data: financialData });
+    }
+    await tx.activity.create({
+      data: { projectId, userId: user.id, type: "UPDATE", message: changes.join(" ") },
+    });
+  });
+
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    include: { financial: true, customer: true, supplier: true, owner: true },
+  });
+}
+
+/**
+ * Deliberately a separate endpoint from updateProject — recording a payment
+ * has its own real business rule (can't exceed the outstanding balance) that
+ * a free-form correction edit to customerPaid/supplierPaid should NOT be
+ * bound by. Currency is never accepted here; it always uses whatever the
+ * project's Financial row already has.
+ */
+export async function recordPayment(
+  projectId: string,
+  side: "customer" | "supplier",
+  amount: number,
+  note: string | undefined,
+  user: AuthUser,
+) {
+  if (!(amount > 0)) {
+    throw new AppError("Payment amount must be greater than 0", 400);
+  }
+  if (side === "customer" && !canSeeRevenue(user.role)) {
+    throw new AppError("Insufficient permissions", 403);
+  }
+  if (side === "supplier" && !canSeeCost(user.role)) {
+    throw new AppError("Insufficient permissions", 403);
+  }
+
+  const project = await getProjectWithFinancial(projectId);
+  const financials = computeFinancials(project.financial);
+  const balance = side === "customer" ? (financials?.customerBalance ?? 0) : (financials?.supplierBalance ?? 0);
+
+  if (amount > balance) {
+    throw new AppError(
+      `Payment of ${amount.toFixed(2)} exceeds the outstanding balance of ${balance.toFixed(2)}`,
+      400,
+    );
+  }
+
+  const currency = project.financial?.currency ?? "USD";
+  const field = side === "customer" ? "customerPaid" : "supplierPaid";
+  const currentPaid = Number(project.financial?.[field] ?? 0);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.financial.update({
+      where: { projectId },
+      data: { [field]: currentPaid + amount },
+    });
+    await tx.activity.create({
+      data: {
+        projectId,
+        userId: user.id,
+        type: "UPDATE",
+        message: `${side === "customer" ? "Customer" : "Supplier"} payment of ${amount.toFixed(2)} ${currency} recorded.${note ? ` Note: ${note}` : ""}`,
+      },
+    });
+  });
+
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    include: { financial: true, customer: true, supplier: true, owner: true },
+  });
 }

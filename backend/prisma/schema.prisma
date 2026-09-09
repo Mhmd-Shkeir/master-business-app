@@ -29,6 +29,12 @@ enum ActivityType {
   OVERRIDE
 }
 
+enum Currency {
+  USD
+  EUR
+  LBP
+}
+
 model User {
   id           String     @id @default(cuid())
   name         String
@@ -81,6 +87,7 @@ model Project {
 
   nextAction  String?
   dueDate     DateTime?
+  description String?
 
   // Set true only via the Admin shipment-hold override flow; the override event itself
   // is always logged as an Activity so the audit trail doesn't depend on this flag alone.
@@ -106,6 +113,8 @@ model Financial {
 
   customerPaid     Decimal  @default(0) @db.Decimal(14, 2)
   supplierPaid     Decimal  @default(0) @db.Decimal(14, 2)
+
+  currency         Currency @default(USD)
 
   updatedAt        DateTime @updatedAt
 }

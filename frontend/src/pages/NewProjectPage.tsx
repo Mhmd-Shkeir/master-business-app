@@ -1,20 +1,19 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useCreateProject, useCustomers, useSuppliers } from "../hooks/useProjects";
+import { useCreateProject, useCustomers } from "../hooks/useProjects";
 
 export function NewProjectPage() {
   const { data: customers } = useCustomers();
-  const { data: suppliers } = useSuppliers();
   const createProject = useCreateProject();
   const navigate = useNavigate();
 
   const [projectName, setProjectName] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [supplierId, setSupplierId] = useState("");
+  const [description, setDescription] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [estimatedRevenue, setEstimatedRevenue] = useState("");
-  const [estimatedCost, setEstimatedCost] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
@@ -24,11 +23,11 @@ export function NewProjectPage() {
       const created = await createProject.mutateAsync({
         projectName,
         customerId,
-        supplierId: supplierId || undefined,
         nextAction: nextAction || undefined,
         dueDate: dueDate || undefined,
+        description: description || undefined,
         estimatedRevenue: estimatedRevenue ? Number(estimatedRevenue) : 0,
-        estimatedCost: estimatedCost ? Number(estimatedCost) : 0,
+        currency,
       });
       navigate(`/projects/${(created as { id: string }).id}`);
     } catch {
@@ -37,12 +36,16 @@ export function NewProjectPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg p-6">
+    <div className="animate-fade-in mx-auto max-w-lg p-6">
       <Link to="/" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to dashboard
       </Link>
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
-        <h1 className="mb-4 text-lg font-semibold text-neutral-900">New Project (RFQ)</h1>
+      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
+        <h1 className="mb-1 text-lg font-semibold text-neutral-900">New Project (RFQ)</h1>
+        <p className="mb-4 text-sm text-neutral-400">
+          A supplier and cost aren't known yet at this stage — those get added later via Edit, once
+          Procurement has sourced a quote.
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm text-neutral-600">Project Name</label>
@@ -70,23 +73,17 @@ export function NewProjectPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-600">Supplier (optional)</label>
-            <select
-              value={supplierId}
-              onChange={(e) => setSupplierId(e.target.value)}
+            <label className="mb-1 block text-sm text-neutral-600">Description / Details</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-            >
-              <option value="">None yet</option>
-              {suppliers?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm text-neutral-600">Est. Revenue</label>
+              <label className="mb-1 block text-sm text-neutral-600">Est. Revenue (rough ask)</label>
               <input
                 type="number"
                 min="0"
@@ -96,14 +93,16 @@ export function NewProjectPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-neutral-600">Est. Cost</label>
-              <input
-                type="number"
-                min="0"
-                value={estimatedCost}
-                onChange={(e) => setEstimatedCost(e.target.value)}
+              <label className="mb-1 block text-sm text-neutral-600">Currency</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-              />
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="LBP">LBP</option>
+              </select>
             </div>
           </div>
           <div>
@@ -127,7 +126,7 @@ export function NewProjectPage() {
           <button
             type="submit"
             disabled={createProject.isPending}
-            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
           >
             {createProject.isPending ? "Creating..." : "Create Project"}
           </button>
