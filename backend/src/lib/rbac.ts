@@ -29,15 +29,31 @@ interface FinancialLike {
   currency: unknown;
 }
 
-/** Computed, role-independent business figures. Callers filter visibility after. */
-export function computeFinancials(f: FinancialLike | null | undefined) {
+/** Sums a project's Expense rows (Decimal → number) for margin purposes. */
+export function sumExpenses(expenses: { amount: unknown }[] | null | undefined): number {
+  if (!expenses) return 0;
+  return expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+}
+
+/**
+ * Computed, role-independent business figures. Callers filter visibility after.
+ *
+ * `totalExpenses` (itemized shipping/inspection/etc. costs) is folded into
+ * `totalCost` and therefore into margin — real money spent on the deal
+ * should reduce profitability. It's deliberately NOT folded into
+ * `supplierBalance`: expenses may be paid to a shipper/inspector, not
+ * necessarily the assigned Supplier, so "what we still owe the supplier"
+ * stays based on the supplier's own actualCost/estimatedCost only.
+ */
+export function computeFinancials(f: FinancialLike | null | undefined, totalExpenses: number = 0) {
   if (!f) return null;
 
   const revenue = Number(f.actualRevenue) > 0 ? Number(f.actualRevenue) : Number(f.estimatedRevenue);
-  const cost = Number(f.actualCost) > 0 ? Number(f.actualCost) : Number(f.estimatedCost);
-  const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : null;
+  const supplierCost = Number(f.actualCost) > 0 ? Number(f.actualCost) : Number(f.estimatedCost);
+  const totalCost = supplierCost + totalExpenses;
+  const margin = revenue > 0 ? ((revenue - totalCost) / revenue) * 100 : null;
   const customerBalance = revenue - Number(f.customerPaid);
-  const supplierBalance = cost - Number(f.supplierPaid);
+  const supplierBalance = supplierCost - Number(f.supplierPaid);
 
   return {
     estimatedRevenue: Number(f.estimatedRevenue),
@@ -46,6 +62,8 @@ export function computeFinancials(f: FinancialLike | null | undefined) {
     actualCost: Number(f.actualCost),
     customerPaid: Number(f.customerPaid),
     supplierPaid: Number(f.supplierPaid),
+    totalExpenses,
+    totalCost,
     marginPercent: margin,
     customerBalance,
     supplierBalance,
@@ -77,6 +95,8 @@ export function filterFinancialsForRole(
     result.actualCost = financials.actualCost;
     result.supplierPaid = financials.supplierPaid;
     result.supplierBalance = financials.supplierBalance;
+    result.totalExpenses = financials.totalExpenses;
+    result.totalCost = financials.totalCost;
   }
 
   if (canSeeMargin(role)) {

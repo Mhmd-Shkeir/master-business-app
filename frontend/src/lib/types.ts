@@ -18,6 +18,8 @@ export interface Financial {
   actualCost?: number;
   supplierPaid?: number;
   supplierBalance?: number;
+  totalExpenses?: number;
+  totalCost?: number;
   marginPercent?: number | null;
   currency?: string;
 }

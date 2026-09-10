@@ -2,7 +2,16 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { aiConfigured, env } from "../../lib/env";
 import { prisma } from "../../lib/prisma";
-import { canSeeCost, canSeeRevenue, computeFinancials, filterFinancialsForRole, groupByCurrency, needsAttention, sanitizeActivitiesForRole } from "../../lib/rbac";
+import {
+  canSeeCost,
+  canSeeRevenue,
+  computeFinancials,
+  filterFinancialsForRole,
+  groupByCurrency,
+  needsAttention,
+  sanitizeActivitiesForRole,
+  sumExpenses,
+} from "../../lib/rbac";
 import type { AuthUser } from "../../middleware/auth";
 import { AppError } from "../projects/projects.service";
 
@@ -28,7 +37,7 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
-const PROJECT_INCLUDE = { financial: true, customer: true, supplier: true, owner: true } as const;
+const PROJECT_INCLUDE = { financial: true, customer: true, supplier: true, owner: true, expenses: true } as const;
 
 function roleContextLine(role: AuthUser["role"]): string {
   if (role === "ADMIN") return "This user is an Admin and can see all financial data: revenue, cost, and profit margin.";
@@ -63,7 +72,7 @@ export async function buildDailyBrief(user: AuthUser & { name: string }) {
 
   const flagged = projects
     .map((p) => {
-      const financials = computeFinancials(p.financial);
+      const financials = computeFinancials(p.financial, sumExpenses(p.expenses));
       const attention = needsAttention(p, financials);
       if (!attention.any) return null;
       return {
@@ -170,7 +179,7 @@ async function toolListProjects(args: Record<string, unknown>, user: AuthUser) {
 
   let mapped: { p: (typeof projects)[number]; financials: ReturnType<typeof computeFinancials>; attention: ReturnType<typeof needsAttention> }[] =
     projects.map((p) => {
-      const financials = computeFinancials(p.financial);
+      const financials = computeFinancials(p.financial, sumExpenses(p.expenses));
       return { p, financials, attention: needsAttention(p, financials) };
     });
 
@@ -221,7 +230,7 @@ async function toolGetProjectDetail(args: Record<string, unknown>, user: AuthUse
 
   if (!project) return { found: false };
 
-  const financials = computeFinancials(project.financial);
+  const financials = computeFinancials(project.financial, sumExpenses(project.expenses));
   const activities = await prisma.activity.findMany({
     where: { projectId: project.id },
     include: { user: true },
@@ -311,7 +320,7 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
   const project = await prisma.project.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
   if (!project) throw new AppError("Project not found", 404);
 
-  const financials = computeFinancials(project.financial);
+  const financials = computeFinancials(project.financial, sumExpenses(project.expenses));
   const activities = await prisma.activity.findMany({
     where: { projectId },
     include: { user: true },

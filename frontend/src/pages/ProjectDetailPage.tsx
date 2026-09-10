@@ -564,6 +564,12 @@ export function ProjectDetailPage() {
                   );
                 })}
               </div>
+              {!editing && f.totalCost != null && f.totalExpenses != null && f.totalExpenses > 0 && (
+                <div className="mt-3 border-t border-violet-100 pt-3 text-sm">
+                  <p className="text-neutral-400">Total Cost (incl. {formatCurrency(f.totalExpenses, f.currency)} expenses)</p>
+                  <p className="text-neutral-800">{formatCurrency(f.totalCost, f.currency)}</p>
+                </div>
+              )}
               {!editing && f.supplierBalance != null && f.supplierBalance > 0 && paymentFor !== "supplier" && (
                 <button
                   type="button"
@@ -589,6 +595,7 @@ export function ProjectDetailPage() {
               <p className={(f.marginPercent ?? 0) < 20 ? "font-medium text-amber-600" : "text-neutral-800"}>
                 {formatPercent(f.marginPercent)}
               </p>
+              <p className="mt-0.5 text-xs text-neutral-400">Includes recorded expenses.</p>
             </div>
           )}
         </div>

@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
-import { canSeeCost, computeFinancials, filterFinancialsForRole, needsAttention, sanitizeActivitiesForRole } from "../../lib/rbac";
+import {
+  canSeeCost,
+  computeFinancials,
+  filterFinancialsForRole,
+  needsAttention,
+  sanitizeActivitiesForRole,
+  sumExpenses,
+} from "../../lib/rbac";
 import { authenticate, requireRole, type AuthUser } from "../../middleware/auth";
 import { AppError, addExpense, overrideShipmentHold, recordPayment, transitionProjectStatus, updateProject } from "./projects.service";
 
@@ -13,7 +20,10 @@ function serializeProject(
   role: AuthUser["role"],
 ) {
   if (!project) return null;
-  const financials = computeFinancials(project.financial);
+  // needsAttention.lowMargin depends on the correct (expense-inclusive) margin
+  // for every role, even though the marginPercent number itself is Admin-only —
+  // so expenses are always summed here, regardless of who's asking.
+  const financials = computeFinancials(project.financial, sumExpenses(project.expenses));
 
   return {
     id: project.id,
@@ -40,13 +50,19 @@ function serializeProject(
 function loadProjectById(id: string) {
   return prisma.project.findUnique({
     where: { id },
-    include: { financial: true, customer: true, supplier: true, owner: true },
+    include: {
+      financial: true,
+      customer: true,
+      supplier: true,
+      owner: true,
+      expenses: { orderBy: { createdAt: "desc" } },
+    },
   });
 }
 
 projectsRouter.get("/", async (req, res) => {
   const projects = await prisma.project.findMany({
-    include: { financial: true, customer: true, supplier: true, owner: true },
+    include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
     orderBy: { lastUpdate: "desc" },
   });
   res.json(projects.map((p) => serializeProject(p, req.user!.role)));
@@ -72,11 +88,10 @@ projectsRouter.get("/:id", async (req, res) => {
 
   // Expenses are cost-side data (shipping, inspection, etc.) — same visibility
   // rule as Supplier/Cost. The key is genuinely absent from the response for a
-  // role that can't see it, not just hidden client-side.
+  // role that can't see it, not just hidden client-side. (Already fetched via
+  // loadProjectById's include — used above for the margin calc regardless of
+  // role, only gated here for what actually goes in the response.)
   const canViewExpenses = canSeeCost(req.user!.role);
-  const expenses = canViewExpenses
-    ? await prisma.expense.findMany({ where: { projectId: req.params.id }, orderBy: { createdAt: "desc" } })
-    : null;
 
   res.json({
     ...serializeProject(project, req.user!.role),
@@ -89,7 +104,7 @@ projectsRouter.get("/:id", async (req, res) => {
     })),
     ...(canViewExpenses
       ? {
-          expenses: (expenses ?? []).map((e) => ({
+          expenses: project.expenses.map((e) => ({
             id: e.id,
             category: e.category,
             amount: e.amount,
@@ -130,7 +145,7 @@ projectsRouter.post("/", requireRole("ADMIN", "SALES"), async (req, res) => {
       financial: { create: { estimatedRevenue: data.estimatedRevenue, currency: data.currency } },
       activities: { create: { type: "SYSTEM", message: "Project created.", userId: req.user!.id } },
     },
-    include: { financial: true, customer: true, supplier: true, owner: true },
+    include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
   });
 
   res.status(201).json(serializeProject(project, req.user!.role));
