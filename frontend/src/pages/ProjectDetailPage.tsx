@@ -1,13 +1,22 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
+import { SparkleIcon } from "../components/icons";
 import { RecordPaymentForm } from "../components/RecordPaymentForm";
 import { StatusBadge } from "../components/StatusBadge";
-import { useOverrideHold, useProject, useSuppliers, useTransitionStatus, useUpdateProject } from "../hooks/useProjects";
+import { useConfirmNote, useDraftEmail } from "../hooks/useAI";
+import {
+  useAddExpense,
+  useOverrideHold,
+  useProject,
+  useSuppliers,
+  useTransitionStatus,
+  useUpdateProject,
+} from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate, formatPercent } from "../lib/format";
-import type { Activity, ProjectStatus } from "../lib/types";
+import type { Activity, ProjectDetail, ProjectStatus } from "../lib/types";
 
 const ACTIVITY_STYLES: Record<Activity["type"], string> = {
   SYSTEM: "border-blue-300",
@@ -17,6 +26,107 @@ const ACTIVITY_STYLES: Record<Activity["type"], string> = {
 };
 
 const WORKFLOW_ORDER: ProjectStatus[] = ["RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
+
+function extractError(err: unknown, fallback: string): string {
+  return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
+}
+
+function AIAssistantPanel({ projectId }: { projectId: string }) {
+  const draftEmail = useDraftEmail(projectId);
+  const confirmNote = useConfirmNote(projectId);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [drafted, setDrafted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+
+  async function handleDraft() {
+    setError(null);
+    setConfirmed(false);
+    try {
+      const result = await draftEmail.mutateAsync(undefined);
+      setSubject(result.subject);
+      setBody(result.body);
+      setDrafted(true);
+    } catch (err) {
+      setError(extractError(err, "Couldn't draft an email right now."));
+    }
+  }
+
+  async function handleConfirm() {
+    setError(null);
+    try {
+      await confirmNote.mutateAsync(`AI-drafted follow-up (edited and confirmed):\n\nSubject: ${subject}\n\n${body}`);
+      setConfirmed(true);
+      setDrafted(false);
+    } catch (err) {
+      setError(extractError(err, "Couldn't record this note."));
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+      <h2 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+        <SparkleIcon className="h-3.5 w-3.5" />
+        AI Assistant
+      </h2>
+
+      {!drafted && (
+        <button
+          type="button"
+          onClick={handleDraft}
+          disabled={draftEmail.isPending}
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {draftEmail.isPending ? "Drafting..." : "Draft Follow-up Email"}
+        </button>
+      )}
+
+      {drafted && (
+        <div className="space-y-2">
+          <p className="text-xs text-neutral-500">Review and edit before confirming — nothing is recorded until you confirm.</p>
+          <div>
+            <label className="mb-1 block text-xs text-neutral-500">Subject</label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-neutral-500">Body</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={6}
+              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={confirmNote.isPending}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {confirmNote.isPending ? "Recording..." : "Edit and Confirm"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDrafted(false)}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:bg-white"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmed && <p className="mt-2 text-xs text-emerald-600">Recorded to the Activity Timeline below.</p>}
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
 
 const REVENUE_FIELDS = [
   { key: "estimatedRevenue", label: "Est. Revenue" },
@@ -32,8 +142,125 @@ const COST_FIELDS = [
 
 const FINANCIAL_INPUT_FIELDS = [...REVENUE_FIELDS, ...COST_FIELDS] as const;
 
-function extractError(err: unknown, fallback: string): string {
-  return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
+const EXPENSE_CATEGORIES = ["Shipping", "Inspection", "Customs", "Storage", "Other"];
+
+function ExpensesSection({ project }: { project: ProjectDetail }) {
+  const addExpense = useAddExpense(project.id);
+  const [showForm, setShowForm] = useState(false);
+  const [category, setCategory] = useState("Shipping");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const expenses = project.expenses ?? [];
+  const currency = project.financial?.currency;
+  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const numericAmount = Number(amount);
+    if (!(numericAmount > 0)) {
+      setError("Amount must be greater than 0.");
+      return;
+    }
+    try {
+      await addExpense.mutateAsync({ category, amount: numericAmount, note: note || undefined });
+      setAmount("");
+      setNote("");
+      setShowForm(false);
+    } catch (err) {
+      setError(extractError(err, "Failed to add expense"));
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-200/70 bg-neutral-50/60 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-600">Expenses</h2>
+        {expenses.length > 0 && (
+          <span className="text-xs text-neutral-500">Total: {formatCurrency(total, currency)}</span>
+        )}
+      </div>
+
+      {expenses.length === 0 ? (
+        <p className="text-sm text-neutral-400">No expenses recorded yet.</p>
+      ) : (
+        <div className="mb-3 space-y-2">
+          {expenses.map((e) => (
+            <div key={e.id} className="flex items-center justify-between text-sm">
+              <div>
+                <span className="font-medium text-neutral-800">{e.category}</span>
+                {e.note && <span className="text-neutral-400"> · {e.note}</span>}
+                <p className="text-xs text-neutral-400">{formatDate(e.createdAt)}</p>
+              </div>
+              <span className="font-medium text-neutral-800">{formatCurrency(Number(e.amount), currency)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!showForm && (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+        >
+          + Add Expense
+        </button>
+      )}
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-neutral-200 bg-white p-3">
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            >
+              {EXPENSE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={`Amount (${currency ?? "USD"})`}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
+          <input
+            placeholder="Note (optional)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={addExpense.isPending}
+              className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {addExpense.isPending ? "Adding..." : "Add Expense"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-md border border-neutral-300 px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
 }
 
 export function ProjectDetailPage() {
@@ -354,6 +581,8 @@ export function ProjectDetailPage() {
             </div>
           )}
 
+          {!editing && project.expenses !== undefined && <ExpensesSection project={project} />}
+
           {f.marginPercent !== undefined && (
             <div className="text-sm">
               <p className="text-neutral-400">Profit Margin</p>
@@ -493,6 +722,9 @@ export function ProjectDetailPage() {
           </div>
         )}
         {actionError && <p className="mb-4 text-sm text-red-600">{actionError}</p>}
+
+        {/* AI Assistant */}
+        {!editing && <AIAssistantPanel projectId={project.id} />}
 
         {/* Activity timeline */}
         <div>

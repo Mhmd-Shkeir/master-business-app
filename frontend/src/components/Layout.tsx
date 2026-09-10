@@ -10,6 +10,7 @@ import {
   ProjectsIcon,
   SettingsIcon,
   ShieldIcon,
+  SparkleIcon,
   SuppliersIcon,
 } from "./icons";
 
@@ -123,6 +124,9 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
             <NavLink to="/payments" icon={<PaymentsIcon className={iconClass} />} collapsed={collapsed}>
               Payments
+            </NavLink>
+            <NavLink to="/ai" icon={<SparkleIcon className={iconClass} />} collapsed={collapsed}>
+              Ask AI
             </NavLink>
             {user?.role === "ADMIN" && (
               <NavLink to="/users" icon={<ShieldIcon className={iconClass} />} collapsed={collapsed}>

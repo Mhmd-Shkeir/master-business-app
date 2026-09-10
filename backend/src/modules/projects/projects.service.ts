@@ -358,3 +358,44 @@ export async function recordPayment(
     include: { financial: true, customer: true, supplier: true, owner: true },
   });
 }
+
+/**
+ * Itemized operational costs (shipping, inspection, etc.) — a separate,
+ * cost-side tracked category from the brief's own Financials list. Gated by
+ * canSeeCost, same as Supplier/Cost. Deliberately NOT folded into actualCost
+ * or the margin formula (computeFinancials) — that formula is already tested
+ * and unrelated to this itemized log; the brief lists Expenses as its own
+ * sibling category, not a stated input to margin.
+ */
+export async function addExpense(
+  projectId: string,
+  category: string,
+  amount: number,
+  note: string | undefined,
+  user: AuthUser,
+) {
+  if (!canSeeCost(user.role)) {
+    throw new AppError("Insufficient permissions", 403);
+  }
+  if (!(amount > 0)) {
+    throw new AppError("Expense amount must be greater than 0", 400);
+  }
+
+  const project = await prisma.project.findUnique({ where: { id: projectId }, include: { financial: true } });
+  if (!project) {
+    throw new AppError("Project not found", 404);
+  }
+  const currency = project.financial?.currency ?? "USD";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.expense.create({ data: { projectId, category, amount, note } });
+    await tx.activity.create({
+      data: {
+        projectId,
+        userId: user.id,
+        type: "UPDATE",
+        message: `Expense recorded: ${category} — ${amount.toFixed(2)} ${currency}.${note ? ` Note: ${note}` : ""}`,
+      },
+    });
+  });
+}

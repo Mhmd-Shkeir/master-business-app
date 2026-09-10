@@ -1,38 +1,12 @@
-import { ProjectStatus } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
-import { computeFinancials, filterFinancialsForRole } from "../../lib/rbac";
+import { canSeeCost, computeFinancials, filterFinancialsForRole, needsAttention, sanitizeActivitiesForRole } from "../../lib/rbac";
 import { authenticate, requireRole, type AuthUser } from "../../middleware/auth";
-import { AppError, overrideShipmentHold, recordPayment, transitionProjectStatus, updateProject } from "./projects.service";
+import { AppError, addExpense, overrideShipmentHold, recordPayment, transitionProjectStatus, updateProject } from "./projects.service";
 
 export const projectsRouter = Router();
 projectsRouter.use(authenticate);
-
-const MARGIN_ALERT_THRESHOLD = 20;
-
-function needsAttention(project: {
-  status: ProjectStatus;
-  dueDate: Date | null;
-  nextAction: string | null;
-}, financials: ReturnType<typeof computeFinancials>) {
-  const overdue = Boolean(
-    project.dueDate && project.dueDate < new Date() && project.status !== "CLOSED",
-  );
-  const missingNextAction = !project.nextAction && project.status !== "CLOSED";
-  const lowMargin = financials?.marginPercent != null && financials.marginPercent < MARGIN_ALERT_THRESHOLD;
-  const blockedShipment = Boolean(
-    project.status === "SHIPPING" && financials && financials.customerBalance > 0,
-  );
-
-  return {
-    overdue,
-    missingNextAction,
-    lowMargin,
-    blockedShipment,
-    any: overdue || missingNextAction || lowMargin || blockedShipment,
-  };
-}
 
 function serializeProject(
   project: Awaited<ReturnType<typeof loadProjectById>>,
@@ -88,16 +62,42 @@ projectsRouter.get("/:id", async (req, res) => {
     include: { user: true },
     orderBy: { createdAt: "desc" },
   });
+  // Activity messages are free text and were never field-gated the way the
+  // structured Financial data is — a message like "Expense recorded:
+  // Shipping — 120.00 USD" or "Customer payment of 5000.00 USD recorded"
+  // states a real dollar figure in plain text. Sanitized the same way the AI
+  // context already is, so a role that can't see cost/revenue/margin can't
+  // read it here either.
+  const visibleActivities = sanitizeActivitiesForRole(activities, req.user!.role);
+
+  // Expenses are cost-side data (shipping, inspection, etc.) — same visibility
+  // rule as Supplier/Cost. The key is genuinely absent from the response for a
+  // role that can't see it, not just hidden client-side.
+  const canViewExpenses = canSeeCost(req.user!.role);
+  const expenses = canViewExpenses
+    ? await prisma.expense.findMany({ where: { projectId: req.params.id }, orderBy: { createdAt: "desc" } })
+    : null;
 
   res.json({
     ...serializeProject(project, req.user!.role),
-    activities: activities.map((a) => ({
+    activities: visibleActivities.map((a) => ({
       id: a.id,
       type: a.type,
       message: a.message,
       createdAt: a.createdAt,
       user: a.user ? { id: a.user.id, name: a.user.name } : null,
     })),
+    ...(canViewExpenses
+      ? {
+          expenses: (expenses ?? []).map((e) => ({
+            id: e.id,
+            category: e.category,
+            amount: e.amount,
+            note: e.note,
+            createdAt: e.createdAt,
+          })),
+        }
+      : {}),
   });
 });
 
@@ -232,6 +232,31 @@ projectsRouter.post("/:id/payment", async (req, res) => {
       req.user!,
     );
     res.json(serializeProject(updated, req.user!.role));
+  } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    throw err;
+  }
+});
+
+const addExpenseSchema = z
+  .object({
+    category: z.string().min(1),
+    amount: z.coerce.number().positive(),
+    note: z.string().optional(),
+  })
+  .strict();
+
+projectsRouter.post("/:id/expenses", async (req, res) => {
+  const parsed = addExpenseSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+  }
+  try {
+    await addExpense(req.params.id, parsed.data.category, parsed.data.amount, parsed.data.note, req.user!);
+    const updated = await loadProjectById(req.params.id);
+    res.status(201).json(serializeProject(updated, req.user!.role));
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });

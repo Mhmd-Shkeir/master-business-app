@@ -55,8 +55,17 @@ export interface Activity {
   user: { id: string; name: string } | null;
 }
 
+export interface Expense {
+  id: string;
+  category: string;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface ProjectDetail extends ProjectSummary {
   activities: Activity[];
+  expenses?: Expense[];
 }
 
 export interface Customer {

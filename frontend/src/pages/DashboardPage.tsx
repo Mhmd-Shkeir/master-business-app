@@ -1,16 +1,60 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
-import { CheckCircleIcon, ChevronRightIcon, ClockIcon, DollarIcon, InboxIcon, PaymentsIcon, ProjectsIcon } from "../components/icons";
+import { CheckCircleIcon, ChevronRightIcon, ClockIcon, DollarIcon, InboxIcon, PaymentsIcon, ProjectsIcon, SparkleIcon } from "../components/icons";
 import { Skeleton } from "../components/Skeleton";
 import { StatusBadge } from "../components/StatusBadge";
+import { useDailyBrief } from "../hooks/useAI";
 import { useProjects } from "../hooks/useProjects";
 import { groupByCurrency } from "../lib/aggregate";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate } from "../lib/format";
 import type { ProjectStatus, ProjectSummary } from "../lib/types";
+
+function extractError(err: unknown, fallback: string): string {
+  return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
+}
+
+function DailyBriefCard() {
+  const dailyBrief = useDailyBrief();
+  const [error, setError] = useState<string | null>(null);
+
+  async function generate() {
+    setError(null);
+    try {
+      await dailyBrief.mutateAsync();
+    } catch (err) {
+      setError(extractError(err, "Couldn't generate a brief right now."));
+    }
+  }
+
+  return (
+    <section className="mb-8 rounded-xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+          <SparkleIcon className="h-3.5 w-3.5" />
+          Daily Brief
+        </h2>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={dailyBrief.isPending}
+          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {dailyBrief.isPending ? "Generating..." : dailyBrief.data ? "Regenerate" : "Generate"}
+        </button>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {dailyBrief.data ? (
+        <p className="whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
+      ) : (
+        !error && <p className="text-sm text-neutral-400">Generate a summary of what needs attention today.</p>
+      )}
+    </section>
+  );
+}
 
 const PIPELINE_STAGES: { status: ProjectStatus; bar: string; dot: string }[] = [
   { status: "RFQ", bar: "bg-slate-400", dot: "bg-slate-400" },
@@ -213,6 +257,8 @@ export function DashboardPage() {
           </Link>
         )}
       </header>
+
+      <DailyBriefCard />
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 

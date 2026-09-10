@@ -2,6 +2,7 @@ import "express-async-errors";
 import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
 import { prisma } from "./lib/prisma";
+import { aiRouter } from "./modules/ai/ai.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { customersRouter } from "./modules/customers/customers.routes";
 import { suppliersRouter } from "./modules/suppliers/suppliers.routes";
@@ -28,6 +29,7 @@ app.use("/api/customers", customersRouter);
 app.use("/api/suppliers", suppliersRouter);
 app.use("/api/projects", projectsRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/ai", aiRouter);
 
 // Catch-all error handler. express-async-errors forwards thrown/rejected
 // errors from async route handlers here instead of crashing the process.

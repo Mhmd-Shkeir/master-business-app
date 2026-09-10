@@ -127,6 +127,18 @@ export function useRecordPayment(projectId: string) {
   });
 }
 
+export function useAddExpense(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { category: string; amount: number; note?: string }) =>
+      (await api.post(`/projects/${projectId}/expenses`, data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+    },
+  });
+}
+
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) =>
