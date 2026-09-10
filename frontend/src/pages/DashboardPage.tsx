@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
-import { CheckCircleIcon, InboxIcon } from "../components/icons";
+import { CheckCircleIcon, ChevronRightIcon, ClockIcon, DollarIcon, InboxIcon, PaymentsIcon, ProjectsIcon } from "../components/icons";
 import { Skeleton } from "../components/Skeleton";
 import { StatusBadge } from "../components/StatusBadge";
 import { useProjects } from "../hooks/useProjects";
@@ -18,6 +19,18 @@ const PIPELINE_STAGES: { status: ProjectStatus; bar: string; dot: string }[] = [
   { status: "CLOSED", bar: "bg-emerald-500", dot: "bg-emerald-500" },
 ];
 
+function IconBadge({ icon, tint = "neutral" }: { icon: ReactNode; tint?: "neutral" | "indigo" }) {
+  return (
+    <span
+      className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+        tint === "indigo" ? "bg-indigo-50 text-indigo-600" : "bg-neutral-100 text-neutral-400"
+      }`}
+    >
+      {icon}
+    </span>
+  );
+}
+
 function ProjectPipeline({ projects }: { projects: ProjectSummary[] }) {
   const total = projects.length;
   const segments = PIPELINE_STAGES.map((s) => ({
@@ -26,7 +39,7 @@ function ProjectPipeline({ projects }: { projects: ProjectSummary[] }) {
   }));
 
   return (
-    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Pipeline</h2>
         <span className="text-xs text-neutral-400">{total} total projects</span>
@@ -80,7 +93,7 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
   const avg = total > 0 ? withMargin.reduce((sum, p) => sum + (p.financial!.marginPercent ?? 0), 0) / total : 0;
 
   return (
-    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Margin Health</h2>
         {total > 0 && <span className="text-xs text-neutral-400">{avg.toFixed(1)}% avg</span>}
@@ -137,10 +150,13 @@ const SUBTITLE: Record<string, string> = {
   PROCUREMENT: "Procurement Overview",
 };
 
-function CurrencyCard({ label, amounts }: { label: string; amounts: Map<string, number> }) {
+function CurrencyCard({ label, amounts, icon }: { label: string; amounts: Map<string, number>; icon: ReactNode }) {
   return (
-    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium text-neutral-500">{label}</p>
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+      <div className="mb-1 flex items-start justify-between">
+        <p className="text-xs font-medium text-neutral-500">{label}</p>
+        <IconBadge icon={icon} tint="indigo" />
+      </div>
       {amounts.size === 0 ? (
         <p className="text-2xl font-semibold text-neutral-900">—</p>
       ) : amounts.size === 1 ? (
@@ -202,7 +218,7 @@ export function DashboardPage() {
       {isLoading ? (
         <section className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+            <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <Skeleton className="mb-2 h-3 w-20" />
               <Skeleton className="h-7 w-14" />
             </div>
@@ -210,20 +226,33 @@ export function DashboardPage() {
         </section>
       ) : (
         <section className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
+          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+            <div className="mb-1 flex items-start justify-between">
+              <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
+              <IconBadge icon={<ProjectsIcon className="h-4 w-4" />} />
+            </div>
             <p className="text-2xl font-semibold text-neutral-900">{activeRfqs}</p>
           </div>
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-neutral-500">Pending Quotes</p>
+          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+            <div className="mb-1 flex items-start justify-between">
+              <p className="text-xs font-medium text-neutral-500">Pending Quotes</p>
+              <IconBadge icon={<ClockIcon className="h-4 w-4" />} />
+            </div>
             <p className="text-2xl font-semibold text-neutral-900">{pendingQuotes}</p>
           </div>
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-neutral-500">Active Orders</p>
+          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+            <div className="mb-1 flex items-start justify-between">
+              <p className="text-xs font-medium text-neutral-500">Active Orders</p>
+              <IconBadge icon={<PaymentsIcon className="h-4 w-4" />} />
+            </div>
             <p className="text-2xl font-semibold text-neutral-900">{activeOrders}</p>
           </div>
-          {showPayments && <CurrencyCard label="Payments Due" amounts={paymentsDueByCurrency} />}
-          {showPayables && <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} />}
+          {showPayments && (
+            <CurrencyCard label="Payments Due" amounts={paymentsDueByCurrency} icon={<DollarIcon className="h-4 w-4" />} />
+          )}
+          {showPayables && (
+            <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
+          )}
         </section>
       )}
 
@@ -265,7 +294,10 @@ export function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <AttentionBadges project={p} />
+                <div className="flex items-center gap-3">
+                  <AttentionBadges project={p} />
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-300" />
+                </div>
               </Link>
             ))}
           </div>

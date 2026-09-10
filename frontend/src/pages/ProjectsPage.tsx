@@ -2,14 +2,45 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
-import { InboxIcon } from "../components/icons";
+import { DownloadIcon, InboxIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
 import { useProjects } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate } from "../lib/format";
-import type { ProjectStatus } from "../lib/types";
+import type { ProjectStatus, ProjectSummary } from "../lib/types";
 
 const STATUS_OPTIONS: (ProjectStatus | "ALL")[] = ["ALL", "RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
+
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function exportProjectsCsv(projects: ProjectSummary[]) {
+  const header = ["Project", "Customer", "Status", "Owner", "Due Date", "Value", "Currency"];
+  const rows = projects.map((p) => {
+    const value = p.financial?.estimatedRevenue ?? p.financial?.estimatedCost;
+    return [
+      p.projectName,
+      p.customer?.name ?? "",
+      p.status,
+      p.owner?.name ?? "",
+      formatDate(p.dueDate),
+      value != null ? String(value) : "",
+      value != null ? (p.financial?.currency ?? "") : "",
+    ];
+  });
+  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `projects-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export function ProjectsPage() {
   const { user } = useAuth();
@@ -30,14 +61,25 @@ export function ProjectsPage() {
     <div className="animate-fade-in mx-auto max-w-5xl p-6">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
-        {(user?.role === "ADMIN" || user?.role === "SALES") && (
-          <Link
-            to="/projects/new"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportProjectsCsv(filtered)}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            + New Project
-          </Link>
-        )}
+            <DownloadIcon className="h-4 w-4" />
+            Export
+          </button>
+          {(user?.role === "ADMIN" || user?.role === "SALES") && (
+            <Link
+              to="/projects/new"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            >
+              + New Project
+            </Link>
+          )}
+        </div>
       </header>
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}

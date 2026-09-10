@@ -88,6 +88,42 @@ export function CheckCircleIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ClockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" />
+    </Icon>
+  );
+}
+
+export function DollarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 2v20" />
+      <path d="M16.5 6.5c0-1.7-1.6-3-4-3-2.6 0-4.5 1.4-4.5 3.3 0 4 8.5 2 8.5 6 0 2-1.9 3.4-4.5 3.4-2.4 0-4-1.3-4-3" />
+    </Icon>
+  );
+}
+
+export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M9 5l7 7-7 7" />
+    </Icon>
+  );
+}
+
+export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M4 19h16" />
+    </Icon>
+  );
+}
+
 export function SettingsIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
