@@ -277,7 +277,7 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
   if (changes.length === 0) {
     return prisma.project.findUnique({
       where: { id: projectId },
-      include: { financial: true, customer: true, supplier: true, owner: true },
+      include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
     });
   }
 
@@ -295,7 +295,7 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
 
   return prisma.project.findUnique({
     where: { id: projectId },
-    include: { financial: true, customer: true, supplier: true, owner: true },
+    include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
   });
 }
 
@@ -355,7 +355,7 @@ export async function recordPayment(
 
   return prisma.project.findUnique({
     where: { id: projectId },
-    include: { financial: true, customer: true, supplier: true, owner: true },
+    include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
   });
 }
 
