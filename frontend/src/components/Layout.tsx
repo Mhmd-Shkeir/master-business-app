@@ -168,13 +168,13 @@ export function Layout({ children }: { children: ReactNode }) {
               <span>&copy; {new Date().getFullYear()} Master Business Management</span>
               <span className="text-neutral-300">·</span>
               <span>Version 1.0</span>
-              <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                Internal
-              </span>
+              <span className="text-neutral-300">·</span>
+              <span>Internal Business Platform</span>
             </p>
-            <p>
-              Signed in as <span className="font-medium text-neutral-600">{user?.name}</span>{" "}
-              <span className="text-neutral-300">·</span> {ROLE_LABEL[user?.role ?? ""]}
+            <p className="flex items-center gap-2 text-neutral-400">
+              <span>Help &amp; Support</span>
+              <span className="text-neutral-300">·</span>
+              <span>Privacy</span>
             </p>
           </div>
         </footer>

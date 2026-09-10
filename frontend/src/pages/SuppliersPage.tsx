@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
-import { useDeleteSupplier, useSuppliers, useUpdateSupplier } from "../hooks/useProjects";
+import { useCreateSupplier, useDeleteSupplier, useProjects, useSuppliers, useUpdateSupplier } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import type { Supplier } from "../lib/types";
 
@@ -14,13 +14,39 @@ function extractError(err: unknown, fallback: string): string {
 export function SuppliersPage() {
   const { user } = useAuth();
   const { data: suppliers, isLoading, error, refetch } = useSuppliers();
+  const { data: projects } = useProjects();
+  const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
   const deleteSupplier = useDeleteSupplier();
   const canManage = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
+  const [showCreate, setShowCreate] = useState(false);
+  const [newSupplier, setNewSupplier] = useState({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+
+  const projectCount = (supplierId: string) => (projects ?? []).filter((p) => p.supplier?.id === supplierId).length;
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    setCreateError(null);
+    try {
+      await createSupplier.mutateAsync({
+        name: newSupplier.name,
+        contactName: newSupplier.contactName || undefined,
+        contactEmail: newSupplier.contactEmail || undefined,
+        country: newSupplier.country || undefined,
+        paymentTerms: newSupplier.paymentTerms || undefined,
+      });
+      setNewSupplier({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
+      setShowCreate(false);
+    } catch (err) {
+      setCreateError(extractError(err, "Failed to create supplier"));
+    }
+  }
 
   function startEditing(s: Supplier) {
     setRowError(null);
@@ -63,11 +89,80 @@ export function SuppliersPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-4xl p-6">
-      <h1 className="mb-6 text-lg font-semibold text-neutral-900">Suppliers</h1>
+    <div className="animate-fade-in mx-auto max-w-5xl p-6">
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-neutral-900">Suppliers</h1>
+          <p className="text-sm text-neutral-400">Manage supplier accounts and sourcing relationships</p>
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setShowCreate((v) => !v)}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
+            + Add Supplier
+          </button>
+        )}
+      </header>
 
-      {isLoading && <p className="text-sm text-neutral-400">Loading...</p>}
       {error && <ErrorState message="Failed to load suppliers." onRetry={() => refetch()} />}
+
+      {showCreate && (
+        <form onSubmit={handleCreate} className="mb-4 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <input
+              required
+              placeholder="Name"
+              value={newSupplier.name}
+              onChange={(e) => setNewSupplier((s) => ({ ...s, name: e.target.value }))}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+            <input
+              placeholder="Contact name"
+              value={newSupplier.contactName}
+              onChange={(e) => setNewSupplier((s) => ({ ...s, contactName: e.target.value }))}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+            <input
+              type="email"
+              placeholder="Contact email"
+              value={newSupplier.contactEmail}
+              onChange={(e) => setNewSupplier((s) => ({ ...s, contactEmail: e.target.value }))}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+            <input
+              placeholder="Country"
+              value={newSupplier.country}
+              onChange={(e) => setNewSupplier((s) => ({ ...s, country: e.target.value }))}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+            <input
+              placeholder="Payment terms"
+              value={newSupplier.paymentTerms}
+              onChange={(e) => setNewSupplier((s) => ({ ...s, paymentTerms: e.target.value }))}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
+          {createError && <p className="mt-2 text-sm text-red-600">{createError}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="submit"
+              disabled={createSupplier.isPending}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {createSupplier.isPending ? "Creating..." : "Create Supplier"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
         <table className="w-full text-sm">
@@ -78,13 +173,14 @@ export function SuppliersPage() {
               <th className="px-4 py-2.5">Email</th>
               <th className="px-4 py-2.5">Country</th>
               <th className="px-4 py-2.5">Payment Terms</th>
+              <th className="px-4 py-2.5 text-right">Projects</th>
               {canManage && <th className="px-4 py-2.5">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {suppliers?.length === 0 && !isLoading && (
               <tr>
-                <td colSpan={canManage ? 6 : 5} className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={canManage ? 7 : 6} className="px-4 py-8 text-center text-neutral-400">
                   <div className="flex flex-col items-center gap-2">
                     <InboxIcon className="h-5 w-5 text-neutral-300" />
                     No suppliers found.
@@ -133,6 +229,7 @@ export function SuppliersPage() {
                           className="w-full rounded border border-neutral-300 px-2 py-1"
                         />
                       </td>
+                      <td className="px-4 py-2 text-right text-neutral-400">{projectCount(s.id)}</td>
                       <td className="space-x-2 px-4 py-2">
                         <button
                           type="button"
@@ -162,6 +259,7 @@ export function SuppliersPage() {
                       <td className="px-4 py-2 text-neutral-600">{s.contactEmail ?? "—"}</td>
                       <td className="px-4 py-2 text-neutral-600">{s.country ?? "—"}</td>
                       <td className="px-4 py-2 text-neutral-600">{s.paymentTerms ?? "—"}</td>
+                      <td className="px-4 py-2 text-right text-neutral-600">{projectCount(s.id)}</td>
                       {canManage && (
                         <td className="space-x-2 px-4 py-2">
                           <button

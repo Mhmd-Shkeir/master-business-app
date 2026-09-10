@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Avatar } from "../components/Avatar";
+import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
+import { StatusBadge } from "../components/StatusBadge";
 import { useProjects, useSupplier, useUpdateSupplier } from "../hooks/useProjects";
 import { groupByCurrency } from "../lib/aggregate";
-import { formatCurrency, formatDate } from "../lib/format";
+import { formatCurrency } from "../lib/format";
 
 function extractError(err: unknown, fallback: string): string {
   return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
@@ -66,15 +69,21 @@ export function SupplierDetailPage() {
 
       <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-start justify-between">
-          {editing ? (
-            <input
-              value={form.name}
-              onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-indigo-500"
-            />
-          ) : (
-            <h1 className="text-lg font-semibold text-neutral-900">{supplier.name}</h1>
-          )}
+          <div className="flex items-start gap-3">
+            {!editing && <Avatar name={supplier.name} size="md" />}
+            <div>
+              {editing ? (
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+                  className="w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-indigo-500"
+                />
+              ) : (
+                <h1 className="text-lg font-semibold text-neutral-900">{supplier.name}</h1>
+              )}
+              {!editing && <p className="text-sm text-neutral-400">{supplier.contactName ?? "No contact on file"}</p>}
+            </div>
+          </div>
           {!editing && (
             <button
               type="button"
@@ -161,8 +170,9 @@ export function SupplierDetailPage() {
               className="flex items-center justify-between rounded-lg border border-neutral-200 p-3 text-sm shadow-sm transition-shadow hover:shadow-md"
             >
               <span className="font-medium text-neutral-900">{p.projectName}</span>
-              <span className="text-neutral-500">
-                {p.status} · Due {formatDate(p.dueDate)}
+              <span className="flex items-center gap-2 text-neutral-500">
+                <StatusBadge status={p.status} />
+                <DueDate date={p.dueDate} overdue={p.needsAttention.overdue} />
               </span>
             </Link>
           ))}

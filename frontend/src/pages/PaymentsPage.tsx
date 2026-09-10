@@ -99,7 +99,10 @@ export function PaymentsPage() {
 
   return (
     <div className="animate-fade-in mx-auto max-w-4xl p-6">
-      <h1 className="mb-6 text-lg font-semibold text-neutral-900">Payments</h1>
+      <header className="mb-6">
+        <h1 className="text-lg font-semibold text-neutral-900">Payments</h1>
+        <p className="text-sm text-neutral-400">Track receivables and payables across active projects</p>
+      </header>
 
       {isLoading && <p className="text-sm text-neutral-400">Loading...</p>}
       {error && <ErrorState message="Failed to load payments." onRetry={() => refetch()} />}

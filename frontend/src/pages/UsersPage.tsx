@@ -41,7 +41,10 @@ export function UsersPage() {
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl p-6">
-      <h1 className="mb-6 text-lg font-semibold text-neutral-900">Users</h1>
+      <header className="mb-6">
+        <h1 className="text-lg font-semibold text-neutral-900">Users</h1>
+        <p className="text-sm text-neutral-400">Manage internal team accounts and roles</p>
+      </header>
 
       {error && <ErrorState message="Failed to load users." onRetry={() => refetch()} />}
 

@@ -152,6 +152,16 @@ export function useUpdateProfile() {
 
 type EntityKind = "customers" | "suppliers";
 
+function useCreateEntity(kind: EntityKind) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Record<string, unknown>) => (await api.post(`/${kind}`, data)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [kind] });
+    },
+  });
+}
+
 function useUpdateEntity(kind: EntityKind) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -177,7 +187,9 @@ function useDeleteEntity(kind: EntityKind) {
   });
 }
 
+export const useCreateCustomer = () => useCreateEntity("customers");
 export const useUpdateCustomer = () => useUpdateEntity("customers");
 export const useDeleteCustomer = () => useDeleteEntity("customers");
+export const useCreateSupplier = () => useCreateEntity("suppliers");
 export const useUpdateSupplier = () => useUpdateEntity("suppliers");
 export const useDeleteSupplier = () => useDeleteEntity("suppliers");

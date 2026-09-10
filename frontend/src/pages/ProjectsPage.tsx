@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
+import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
 import { DownloadIcon, InboxIcon } from "../components/icons";
 import { StatusBadge } from "../components/StatusBadge";
@@ -60,7 +61,12 @@ export function ProjectsPage() {
   return (
     <div className="animate-fade-in mx-auto max-w-5xl p-6">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
+        <div>
+          <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
+          <p className="text-sm text-neutral-400">
+            Manage customer requests, quotations, orders, shipping, and closed projects
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -144,7 +150,9 @@ export function ProjectsPage() {
                   <StatusBadge status={p.status} />
                 </td>
                 <td className="px-4 py-2.5 text-neutral-600">{p.owner?.name ?? "—"}</td>
-                <td className="px-4 py-2.5 text-neutral-600">{formatDate(p.dueDate)}</td>
+                <td className="px-4 py-2.5 text-neutral-600">
+                  <DueDate date={p.dueDate} overdue={p.needsAttention.overdue} />
+                </td>
                 <td className="px-4 py-2.5 text-right text-neutral-600">
                   {p.financial?.estimatedRevenue != null || p.financial?.estimatedCost != null
                     ? formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)

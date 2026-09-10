@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
 import { RecordPaymentForm } from "../components/RecordPaymentForm";
 import { StatusBadge } from "../components/StatusBadge";
@@ -152,6 +153,11 @@ export function ProjectDetailPage() {
             <p className="text-sm text-neutral-500">
               {project.customer?.name}
               {!editing && project.supplier ? ` · Supplier: ${project.supplier.name}` : ""}
+              {!editing && (
+                <span className="ml-1 font-mono text-xs text-neutral-400">
+                  · ID: {project.id.slice(-8).toUpperCase()}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -168,6 +174,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Overview</h2>
         <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
             <p className="text-neutral-400">Owner</p>
@@ -195,7 +202,9 @@ export function ProjectDetailPage() {
                 className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
               />
             ) : (
-              <p className="text-neutral-800">{formatDate(project.dueDate)}</p>
+              <p className="text-neutral-800">
+                <DueDate date={project.dueDate} overdue={project.needsAttention.overdue} />
+              </p>
             )}
           </div>
           <div>
@@ -236,6 +245,9 @@ export function ProjectDetailPage() {
         </div>
 
         {/* Financial — server already strips fields the current role can't see */}
+        {("estimatedRevenue" in f || "estimatedCost" in f) && (
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Financial Overview</h2>
+        )}
         <div className="mb-6 space-y-4">
           {editing && "currency" in f && (
             <div className="flex items-center justify-end gap-2 text-xs">
@@ -423,6 +435,9 @@ export function ProjectDetailPage() {
 
         {/* Workflow strip — presentational only */}
         {!editing && (
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Workflow</h2>
+        )}
+        {!editing && (
           <div className="mb-6 flex items-center rounded-xl border border-neutral-200/70 bg-neutral-50/60 px-4 py-3">
             {WORKFLOW_ORDER.map((stage, i) => (
               <div key={stage} className="flex flex-1 items-center last:flex-none">
@@ -481,7 +496,7 @@ export function ProjectDetailPage() {
 
         {/* Activity timeline */}
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Activity</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Activity Timeline</h2>
           <div className="space-y-3">
             {project.activities.map((a) => (
               <div key={a.id} className={`border-l-2 pl-3 text-sm ${ACTIVITY_STYLES[a.type]}`}>

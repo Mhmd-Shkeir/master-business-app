@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
+import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
 import { CheckCircleIcon, ChevronRightIcon, ClockIcon, DollarIcon, InboxIcon, PaymentsIcon, ProjectsIcon } from "../components/icons";
 import { Skeleton } from "../components/Skeleton";
@@ -359,7 +360,9 @@ export function DashboardPage() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 py-2.5 text-neutral-600">{p.owner?.name ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-neutral-600">{formatDate(p.dueDate)}</td>
+                  <td className="px-4 py-2.5 text-neutral-600">
+                    <DueDate date={p.dueDate} overdue={p.needsAttention.overdue} />
+                  </td>
                   <td className="px-4 py-2.5 text-right text-neutral-600">
                     {p.financial?.estimatedRevenue != null || p.financial?.estimatedCost != null
                       ? formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)
