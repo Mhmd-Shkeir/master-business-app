@@ -63,3 +63,20 @@ authRouter.patch("/password", authenticate, async (req, res) => {
 
   res.json({ success: true });
 });
+
+const updateProfileSchema = z.object({ name: z.string().min(1) }).strict();
+
+authRouter.patch("/profile", authenticate, async (req, res) => {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { name: parsed.data.name },
+    select: { id: true, name: true, email: true, role: true },
+  });
+
+  res.json({ user });
+});

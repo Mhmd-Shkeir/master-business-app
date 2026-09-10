@@ -52,21 +52,21 @@ export function RecordPaymentForm({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Amount"
-          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
         />
       </div>
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Reference / note (optional)"
-        className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+        className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
       />
       {error && <p className="text-xs text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={!isValid || recordPayment.isPending}
-          className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {recordPayment.isPending ? "Recording..." : "Record Payment"}
         </button>

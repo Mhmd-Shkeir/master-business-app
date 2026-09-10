@@ -70,7 +70,7 @@ function Section({
                   <button
                     type="button"
                     onClick={() => setOpenFor(p.id)}
-                    className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-neutral-800"
+                    className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
                   >
                     Record Payment
                   </button>

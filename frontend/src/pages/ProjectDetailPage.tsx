@@ -144,7 +144,7 @@ export function ProjectDetailPage() {
               <input
                 value={form.projectName}
                 onChange={(e) => setForm((s) => ({ ...s, projectName: e.target.value }))}
-                className="mb-1 w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-neutral-500"
+                className="mb-1 w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-indigo-500"
               />
             ) : (
               <h1 className="text-lg font-semibold text-neutral-900">{project.projectName}</h1>
@@ -179,7 +179,7 @@ export function ProjectDetailPage() {
               <input
                 value={form.nextAction}
                 onChange={(e) => setForm((s) => ({ ...s, nextAction: e.target.value }))}
-                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
               />
             ) : (
               <p className="text-neutral-800">{project.nextAction ?? "—"}</p>
@@ -192,7 +192,7 @@ export function ProjectDetailPage() {
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => setForm((s) => ({ ...s, dueDate: e.target.value }))}
-                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
               />
             ) : (
               <p className="text-neutral-800">{formatDate(project.dueDate)}</p>
@@ -208,7 +208,7 @@ export function ProjectDetailPage() {
               <select
                 value={form.supplierId}
                 onChange={(e) => setForm((s) => ({ ...s, supplierId: e.target.value }))}
-                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
               >
                 <option value="">None</option>
                 {suppliers?.map((s) => (
@@ -228,7 +228,7 @@ export function ProjectDetailPage() {
               value={form.description}
               onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
               rows={2}
-              className="mt-1 w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+              className="mt-1 w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
             />
           ) : (
             <p className="text-sm text-neutral-800">{project.description ?? "—"}</p>
@@ -243,7 +243,7 @@ export function ProjectDetailPage() {
               <select
                 value={form.currency}
                 onChange={(e) => setForm((s) => ({ ...s, currency: e.target.value }))}
-                className="rounded-md border border-neutral-300 px-2 py-0.5 outline-none focus:border-neutral-500"
+                className="rounded-md border border-neutral-300 px-2 py-0.5 outline-none focus:border-indigo-500"
               >
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -267,7 +267,7 @@ export function ProjectDetailPage() {
                           min="0"
                           value={form[key]}
                           onChange={(e) => setForm((s) => ({ ...s, [key]: e.target.value }))}
-                          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
                         />
                       ) : (
                         <p className="text-neutral-800">{formatCurrency(value, f.currency)}</p>
@@ -285,7 +285,7 @@ export function ProjectDetailPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentFor("customer")}
-                  className="mt-3 rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-neutral-800"
+                  className="mt-3 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
                 >
                   Record Payment
                 </button>
@@ -313,7 +313,7 @@ export function ProjectDetailPage() {
                           min="0"
                           value={form[key]}
                           onChange={(e) => setForm((s) => ({ ...s, [key]: e.target.value }))}
-                          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
                         />
                       ) : (
                         <p className="text-neutral-800">{formatCurrency(value, f.currency)}</p>
@@ -329,7 +329,7 @@ export function ProjectDetailPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentFor("supplier")}
-                  className="mt-3 rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-neutral-800"
+                  className="mt-3 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
                 >
                   Record Payment
                 </button>
@@ -358,7 +358,7 @@ export function ProjectDetailPage() {
               type="button"
               onClick={handleSave}
               disabled={updateProject.isPending}
-              className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
             >
               {updateProject.isPending ? "Saving..." : "Save"}
             </button>
@@ -396,7 +396,7 @@ export function ProjectDetailPage() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Reason for overriding the hold (required, logged to Activity Timeline)"
-                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
                   rows={2}
                 />
                 <div className="flex gap-2">
@@ -430,9 +430,9 @@ export function ProjectDetailPage() {
                   <div
                     className={`h-2.5 w-2.5 rounded-full ${
                       i === currentIndex
-                        ? "bg-neutral-900 ring-4 ring-neutral-900/15"
+                        ? "bg-indigo-600 ring-4 ring-indigo-600/20"
                         : i < currentIndex
-                          ? "bg-neutral-900"
+                          ? "bg-indigo-600"
                           : "bg-neutral-300"
                     }`}
                   />
@@ -443,7 +443,7 @@ export function ProjectDetailPage() {
                   </p>
                 </div>
                 {i < WORKFLOW_ORDER.length - 1 && (
-                  <div className={`mx-1 h-px flex-1 ${i < currentIndex ? "bg-neutral-900" : "bg-neutral-200"}`} />
+                  <div className={`mx-1 h-px flex-1 ${i < currentIndex ? "bg-indigo-600" : "bg-neutral-200"}`} />
                 )}
               </div>
             ))}
@@ -458,7 +458,7 @@ export function ProjectDetailPage() {
                 type="button"
                 onClick={() => attemptTransition(nextStage)}
                 disabled={transition.isPending}
-                className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
               >
                 Move to {nextStage}
               </button>

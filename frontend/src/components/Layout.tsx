@@ -2,7 +2,16 @@ import { useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { Avatar } from "./Avatar";
-import { CustomersIcon, DashboardIcon, LogoutIcon, PaymentsIcon, ProjectsIcon, ShieldIcon, SuppliersIcon } from "./icons";
+import {
+  CustomersIcon,
+  DashboardIcon,
+  LogoutIcon,
+  PaymentsIcon,
+  ProjectsIcon,
+  SettingsIcon,
+  ShieldIcon,
+  SuppliersIcon,
+} from "./icons";
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin",
@@ -28,7 +37,7 @@ function NavLink({
       to={to}
       title={collapsed ? children : undefined}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-blue-600 text-white shadow-sm" : "text-neutral-400 hover:bg-white/5 hover:text-white"
+        active ? "bg-indigo-600 text-white shadow-sm shadow-indigo-900/30" : "text-neutral-400 hover:bg-white/5 hover:text-white"
       } ${collapsed ? "justify-center" : ""}`}
     >
       <span className="shrink-0">{icon}</span>
@@ -49,15 +58,15 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
+    <div className="flex h-screen overflow-hidden bg-neutral-50">
       <aside
-        className={`flex shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 transition-[width] duration-150 ${
+        className={`flex h-screen shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 transition-[width] duration-150 ${
           collapsed ? "w-[68px]" : "w-64"
         }`}
       >
         <div className="flex items-center justify-between gap-2 px-4 py-4">
           <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white shadow-sm">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-sm font-bold text-white shadow-sm">
               M
             </span>
             {!collapsed && (
@@ -89,7 +98,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </button>
         )}
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {!collapsed && (
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
               Operations
@@ -123,11 +132,12 @@ export function Layout({ children }: { children: ReactNode }) {
           </nav>
         </div>
 
-        <div className="border-t border-neutral-800 p-3">
-          <Link
-            to="/profile"
-            className={`flex items-center gap-2.5 rounded-lg p-2 hover:bg-white/5 ${collapsed ? "justify-center" : ""}`}
-          >
+        <div className="shrink-0 border-t border-neutral-800 p-3">
+          <NavLink to="/profile" icon={<SettingsIcon className={iconClass} />} collapsed={collapsed}>
+            Settings
+          </NavLink>
+
+          <div className={`mt-2 flex items-center gap-2.5 p-2 ${collapsed ? "justify-center" : ""}`}>
             <Avatar name={user?.name ?? "?"} size="sm" />
             {!collapsed && (
               <span className="min-w-0">
@@ -135,7 +145,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <span className="block text-xs text-neutral-500">{ROLE_LABEL[user?.role ?? ""]}</span>
               </span>
             )}
-          </Link>
+          </div>
           <button
             type="button"
             onClick={handleLogout}
@@ -150,7 +160,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto">
         <main className="flex-1">{children}</main>
         <footer className="border-t border-neutral-200 bg-white">
           <div className="flex flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">

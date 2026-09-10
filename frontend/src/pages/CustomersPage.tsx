@@ -137,7 +137,7 @@ export function CustomersPage() {
                         <button
                           type="button"
                           onClick={() => saveEditing(c.id)}
-                          className="rounded bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-800"
+                          className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
                         >
                           Save
                         </button>

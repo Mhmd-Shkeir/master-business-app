@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import type { Customer, ProjectDetail, ProjectStatus, ProjectSummary, Supplier } from "../lib/types";
+import { useAuth } from "../lib/auth-context";
+import type { AuthUser, Customer, ProjectDetail, ProjectStatus, ProjectSummary, Supplier } from "../lib/types";
 
 export function useProjects() {
   return useQuery({
@@ -130,6 +131,22 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) =>
       (await api.patch("/auth/password", data)).data,
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  const { updateUser } = useAuth();
+  return useMutation({
+    mutationFn: async (data: { name: string }) =>
+      (await api.patch<{ user: AuthUser }>("/auth/profile", data)).data,
+    onSuccess: ({ user }) => {
+      updateUser(user);
+      // Owner/activity references embed the user's name live via the DB relation,
+      // so any already-cached project list/detail needs a refetch to pick it up.
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
   });
 }
 

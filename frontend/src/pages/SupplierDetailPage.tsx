@@ -70,7 +70,7 @@ export function SupplierDetailPage() {
             <input
               value={form.name}
               onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-lg font-semibold outline-none focus:border-indigo-500"
             />
           ) : (
             <h1 className="text-lg font-semibold text-neutral-900">{supplier.name}</h1>
@@ -96,7 +96,7 @@ export function SupplierDetailPage() {
                 <input
                   value={form[key]}
                   onChange={(e) => setForm((s) => ({ ...s, [key]: e.target.value }))}
-                  className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                  className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
                 />
               ) : (
                 <p className="text-neutral-800">{supplier[key] ?? "—"}</p>
@@ -111,7 +111,7 @@ export function SupplierDetailPage() {
               type="button"
               onClick={handleSave}
               disabled={updateSupplier.isPending}
-              className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
               {updateSupplier.isPending ? "Saving..." : "Save"}
             </button>

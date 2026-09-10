@@ -88,7 +88,7 @@ export function UsersPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -98,7 +98,7 @@ export function UsersPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -111,7 +111,7 @@ export function UsersPage() {
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -119,7 +119,7 @@ export function UsersPage() {
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               >
                 <option value="ADMIN">Admin</option>
                 <option value="SALES">Sales</option>
@@ -131,7 +131,7 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={createUser.isPending}
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
+            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
           >
             {createUser.isPending ? "Creating..." : "Create User"}
           </button>

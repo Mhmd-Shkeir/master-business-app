@@ -53,7 +53,7 @@ export function NewProjectPage() {
               required
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             />
           </div>
           <div>
@@ -62,7 +62,7 @@ export function NewProjectPage() {
               required
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             >
               <option value="">Select a customer...</option>
               {customers?.map((c) => (
@@ -78,7 +78,7 @@ export function NewProjectPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -89,7 +89,7 @@ export function NewProjectPage() {
                 min="0"
                 value={estimatedRevenue}
                 onChange={(e) => setEstimatedRevenue(e.target.value)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -97,7 +97,7 @@ export function NewProjectPage() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
               >
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -110,7 +110,7 @@ export function NewProjectPage() {
             <input
               value={nextAction}
               onChange={(e) => setNextAction(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             />
           </div>
           <div>
@@ -119,14 +119,14 @@ export function NewProjectPage() {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
             disabled={createProject.isPending}
-            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50"
+            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
           >
             {createProject.isPending ? "Creating..." : "Create Project"}
           </button>

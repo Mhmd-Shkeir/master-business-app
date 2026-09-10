@@ -142,13 +142,15 @@ function CurrencyCard({ label, amounts }: { label: string; amounts: Map<string, 
     <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium text-neutral-500">{label}</p>
       {amounts.size === 0 ? (
-        <p className="text-2xl font-semibold">—</p>
+        <p className="text-2xl font-semibold text-neutral-900">—</p>
       ) : amounts.size === 1 ? (
-        <p className="text-2xl font-semibold">{formatCurrency([...amounts.values()][0], [...amounts.keys()][0])}</p>
+        <p className="text-2xl font-semibold text-indigo-600">
+          {formatCurrency([...amounts.values()][0], [...amounts.keys()][0])}
+        </p>
       ) : (
         <div className="space-y-0.5">
           {[...amounts.entries()].map(([currency, total]) => (
-            <p key={currency} className="text-lg font-semibold">
+            <p key={currency} className="text-lg font-semibold text-indigo-600">
               {formatCurrency(total, currency)}
             </p>
           ))}
@@ -188,7 +190,7 @@ export function DashboardPage() {
         {(user?.role === "ADMIN" || user?.role === "SALES") && (
           <Link
             to="/projects/new"
-            className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-neutral-800"
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
           >
             + New Project
           </Link>

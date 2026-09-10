@@ -33,7 +33,7 @@ export function ProjectsPage() {
         {(user?.role === "ADMIN" || user?.role === "SALES") && (
           <Link
             to="/projects/new"
-            className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-neutral-800"
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
           >
             + New Project
           </Link>
@@ -47,12 +47,12 @@ export function ProjectsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search projects or customers..."
-          className="min-w-[200px] flex-1 rounded-md border border-neutral-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-neutral-500 focus:ring-2 focus:ring-neutral-900/5"
+          className="min-w-[200px] flex-1 rounded-md border border-neutral-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
         />
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as ProjectStatus | "ALL")}
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-neutral-500"
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-indigo-500"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
