@@ -166,6 +166,7 @@ export function CustomersPage() {
       )}
 
       <div className="overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-neutral-50 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
             <tr>
@@ -286,6 +287,7 @@ export function CustomersPage() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
       {rowError && <p className="mt-3 text-sm text-red-600">{rowError.message}</p>}
     </div>

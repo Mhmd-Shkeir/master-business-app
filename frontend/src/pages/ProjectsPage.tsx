@@ -113,6 +113,7 @@ export function ProjectsPage() {
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
       <div className="overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-neutral-50 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
             <tr>
@@ -165,6 +166,7 @@ export function ProjectsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
