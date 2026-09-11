@@ -41,7 +41,7 @@ function DailyBriefCard() {
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
+    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-700">
           <SparkleIcon className="h-3.5 w-3.5" />
@@ -58,7 +58,7 @@ function DailyBriefCard() {
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {dailyBrief.data ? (
-        <p className="whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
+        <p className="line-clamp-4 whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
       ) : (
         !error && <p className="text-sm text-neutral-400">Generate a summary of what needs attention today.</p>
       )}
@@ -66,12 +66,12 @@ function DailyBriefCard() {
   );
 }
 
-const PIPELINE_STAGES: { status: ProjectStatus; bar: string; dot: string }[] = [
-  { status: "RFQ", bar: "bg-slate-400", dot: "bg-slate-400" },
-  { status: "QUOTED", bar: "bg-blue-500", dot: "bg-blue-500" },
-  { status: "ORDERED", bar: "bg-violet-500", dot: "bg-violet-500" },
-  { status: "SHIPPING", bar: "bg-amber-500", dot: "bg-amber-500" },
-  { status: "CLOSED", bar: "bg-emerald-500", dot: "bg-emerald-500" },
+const PIPELINE_STAGES: { status: ProjectStatus; label: string; bar: string; dot: string }[] = [
+  { status: "RFQ", label: "RFQ", bar: "bg-slate-400", dot: "bg-slate-400" },
+  { status: "QUOTED", label: "Quoted", bar: "bg-blue-500", dot: "bg-blue-500" },
+  { status: "ORDERED", label: "Ordered", bar: "bg-violet-500", dot: "bg-violet-500" },
+  { status: "SHIPPING", label: "Shipping", bar: "bg-amber-500", dot: "bg-amber-500" },
+  { status: "CLOSED", label: "Closed", bar: "bg-emerald-500", dot: "bg-emerald-500" },
 ];
 
 function IconBadge({ icon, tint = "neutral" }: { icon: ReactNode; tint?: "neutral" | "indigo" }) {
@@ -114,7 +114,7 @@ function ProjectPipeline({ projects }: { projects: ProjectSummary[] }) {
             {segments.map((s) => (
               <span key={s.status} className="flex items-center gap-1.5 text-xs text-neutral-500">
                 <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                {s.status.charAt(0) + s.status.slice(1).toLowerCase()} <span className="font-medium text-neutral-700">{s.count}</span>
+                {s.label} <span className="font-medium text-neutral-700">{s.count}</span>
               </span>
             ))}
           </div>
@@ -136,14 +136,14 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
     },
     {
       label: "Moderate 20–25%",
-      bar: "bg-amber-500",
+      bar: "bg-amber-300",
       emphasize: false,
       count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) >= 20 && (p.financial!.marginPercent ?? 0) < 25)
         .length,
     },
     {
       label: "Low <20%",
-      bar: "bg-red-500",
+      bar: "bg-amber-600",
       emphasize: true,
       count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) < 20).length,
     },
@@ -162,14 +162,14 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
         <div className="space-y-2.5">
           {buckets.map((b) => (
             <div key={b.label} className="flex items-center gap-3 text-xs">
-              <span className={`w-32 shrink-0 ${b.emphasize ? "font-semibold text-red-600" : "text-neutral-500"}`}>
+              <span className={`w-32 shrink-0 ${b.emphasize ? "font-semibold text-amber-700" : "text-neutral-500"}`}>
                 {b.label}
               </span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
                 <div className={`h-full rounded-full ${b.bar}`} style={{ width: `${(b.count / total) * 100}%` }} />
               </div>
               <span
-                className={`w-4 shrink-0 text-right font-medium ${b.emphasize ? "font-semibold text-red-600" : "text-neutral-700"}`}
+                className={`w-4 shrink-0 text-right font-medium ${b.emphasize ? "font-semibold text-amber-700" : "text-neutral-700"}`}
               >
                 {b.count}
               </span>
@@ -210,38 +210,50 @@ function AttentionBadges({ project }: { project: ProjectSummary }) {
   );
 }
 
-function AttentionCard({
-  label,
-  count,
-  icon,
-  tone,
+function CriticalAttentionPanel({
+  overdueCount,
+  lowMarginCount,
+  missingNextActionCount,
+  holdCount,
 }: {
-  label: string;
-  count: number;
-  icon: ReactNode;
-  tone: "red" | "amber" | "neutral";
+  overdueCount: number;
+  lowMarginCount: number;
+  missingNextActionCount: number;
+  holdCount: number;
 }) {
-  const active = count > 0;
-  const iconTint =
-    active && tone === "red"
-      ? "bg-red-50 text-red-600"
-      : active && tone === "amber"
-        ? "bg-amber-50 text-amber-600"
-        : "bg-neutral-100 text-neutral-400";
-  const countTint =
-    active && tone === "red" ? "text-red-600" : active && tone === "amber" ? "text-amber-600" : "text-neutral-900";
+  const rows: { label: string; count: number; dot: string; text: string }[] = [
+    { label: "Overdue", count: overdueCount, dot: "bg-red-500", text: "text-red-700" },
+    { label: "Payment Hold", count: holdCount, dot: "bg-red-500", text: "text-red-700" },
+    { label: "Low Margin", count: lowMarginCount, dot: "bg-amber-500", text: "text-amber-700" },
+    { label: "Missing Next Action", count: missingNextActionCount, dot: "bg-neutral-400", text: "text-neutral-700" },
+  ].filter((r) => r.count > 0);
 
   return (
-    <a
-      href="#attention"
-      className="block rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-    >
-      <div className="mb-1 flex items-start justify-between">
-        <p className="text-xs font-medium text-neutral-500">{label}</p>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconTint}`}>{icon}</span>
-      </div>
-      <p className={`text-2xl font-semibold ${countTint}`}>{count}</p>
-    </a>
+    <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+      <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Critical Attention</h2>
+      {rows.length === 0 ? (
+        <p className="flex items-center gap-1.5 text-sm text-neutral-400">
+          <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
+          Nothing needs attention right now.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((r) => (
+            <a
+              key={r.label}
+              href="#attention"
+              className="flex items-center justify-between rounded-md px-1.5 py-1 text-sm hover:bg-neutral-50"
+            >
+              <span className="flex items-center gap-2 text-neutral-600">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
+                {r.label}
+              </span>
+              <span className={`font-semibold ${r.text}`}>{r.count}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -304,6 +316,15 @@ export function DashboardPage() {
   const overdueCount = active.filter((p) => p.needsAttention.overdue).length;
   const lowMarginCount = active.filter((p) => p.needsAttention.lowMargin).length;
   const missingNextActionCount = active.filter((p) => p.needsAttention.missingNextAction).length;
+  const holdCount = active.filter((p) => p.needsAttention.blockedShipment).length;
+  const attentionBreakdown = [
+    overdueCount > 0 && `${overdueCount} overdue`,
+    lowMarginCount > 0 && `${lowMarginCount} low margin`,
+    missingNextActionCount > 0 && `${missingNextActionCount} missing next action`,
+    holdCount > 0 && `${holdCount} payment hold`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const recent = [...active].sort((a, b) => b.lastUpdate.localeCompare(a.lastUpdate)).slice(0, 5);
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
@@ -330,35 +351,33 @@ export function DashboardPage() {
           )}
         </div>
 
-        <nav className="mt-4 flex flex-wrap items-center gap-1 border-t border-neutral-100 pt-4">
+        <nav className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
           <a
             href="#overview"
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
           >
             Overview
           </a>
           <a
             href="#attention"
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
           >
             Attention
           </a>
           <a
             href="#pipeline"
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
           >
             Pipeline
           </a>
           <a
             href="#projects"
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
           >
             Projects
           </a>
         </nav>
       </header>
-
-      <DailyBriefCard />
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
@@ -400,26 +419,28 @@ export function DashboardPage() {
           {showPayables && (
             <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
           )}
-          <AttentionCard label="Overdue" count={overdueCount} icon={<ClockIcon className="h-4 w-4" />} tone="red" />
-          <AttentionCard
-            label="Missing Next Action"
-            count={missingNextActionCount}
-            icon={<InboxIcon className="h-4 w-4" />}
-            tone="neutral"
-          />
-          <AttentionCard
-            label="Low Margin"
-            count={lowMarginCount}
-            icon={<WarningIcon className="h-4 w-4" />}
-            tone="amber"
-          />
         </section>
       )}
 
+      {!isLoading && (
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CriticalAttentionPanel
+            overdueCount={overdueCount}
+            lowMarginCount={lowMarginCount}
+            missingNextActionCount={missingNextActionCount}
+            holdCount={holdCount}
+          />
+          <DailyBriefCard />
+        </div>
+      )}
+
       <section id="attention">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-700">
+        <h2 className="mb-1 text-base font-bold text-neutral-900">
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
         </h2>
+        <p className="mb-3 min-h-[1rem] text-xs text-neutral-500">
+          {!isLoading && attentionBreakdown}
+        </p>
         {attention.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-400">
             <CheckCircleIcon className="h-6 w-6 text-emerald-500" />
@@ -510,6 +531,7 @@ export function DashboardPage() {
                     <Link to={`/projects/${p.id}`} className="font-medium text-neutral-900 hover:underline">
                       {p.projectName}
                     </Link>
+                    <p className="font-mono text-xs text-neutral-400">{p.id.slice(-8).toUpperCase()}</p>
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2 text-neutral-600">
