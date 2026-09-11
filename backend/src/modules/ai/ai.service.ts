@@ -269,7 +269,7 @@ export async function runQuery(question: string, user: AuthUser & { name: string
     { role: "user", content: question },
   ];
 
-  const groundedOn = new Set<string>();
+  const groundedOn = new Map<string, string>();
 
   for (let round = 0; round < 3; round++) {
     const response = await client.chat.completions.create({
@@ -285,7 +285,7 @@ export async function runQuery(question: string, user: AuthUser & { name: string
     if (!message.tool_calls || message.tool_calls.length === 0) {
       return {
         answer: stripMarkdown(message.content?.trim() || "I don't have an answer for that."),
-        groundedOn: [...groundedOn],
+        groundedOn: [...groundedOn].map(([id, name]) => ({ id, name })),
       };
     }
 
@@ -301,15 +301,19 @@ export async function runQuery(question: string, user: AuthUser & { name: string
       }
       const result = await runTool(call.function.name, args, user);
       if (result && typeof result === "object" && "projects" in result) {
-        for (const p of (result as { projects: ToolProject[] }).projects) groundedOn.add(p.projectName);
+        for (const p of (result as { projects: ToolProject[] }).projects) groundedOn.set(p.id, p.projectName);
       } else if (result && typeof result === "object" && "found" in result && (result as { found: boolean }).found) {
-        groundedOn.add((result as { projectName: string }).projectName);
+        const r = result as { id: string; projectName: string };
+        groundedOn.set(r.id, r.projectName);
       }
       messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
 
-  return { answer: "I wasn't able to complete that request — try rephrasing your question.", groundedOn: [...groundedOn] };
+  return {
+    answer: "I wasn't able to complete that request — try rephrasing your question.",
+    groundedOn: [...groundedOn].map(([id, name]) => ({ id, name })),
+  };
 }
 
 // ---------------------------------------------------------------------------

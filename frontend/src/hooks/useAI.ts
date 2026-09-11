@@ -7,9 +7,14 @@ export interface DailyBriefResult {
   generatedAt: string;
 }
 
+export interface GroundedProject {
+  id: string;
+  name: string;
+}
+
 export interface AIQueryResult {
   answer: string;
-  groundedOn: string[];
+  groundedOn: GroundedProject[];
 }
 
 export interface DraftEmailResult {

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
+import { PageHeader } from "../components/PageHeader";
 import { useCreateCustomer, useCustomers, useDeleteCustomer, useProjects, useUpdateCustomer } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import type { Customer } from "../lib/types";
@@ -89,27 +90,27 @@ export function CustomersPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-5xl p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-neutral-900">Customers</h1>
-          <p className="text-sm text-neutral-400">Manage customer accounts and relationships</p>
-        </div>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setShowCreate((v) => !v)}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-          >
-            + Add Customer
-          </button>
-        )}
-      </header>
+    <div className="animate-fade-in w-full px-8 py-6">
+      <PageHeader
+        title="Customers"
+        subtitle="Manage customer accounts and relationships"
+        actions={
+          canManage && (
+            <button
+              type="button"
+              onClick={() => setShowCreate((v) => !v)}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            >
+              + Add Customer
+            </button>
+          )
+        }
+      />
 
       {error && <ErrorState message="Failed to load customers." onRetry={() => refetch()} />}
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+        <form onSubmit={handleCreate} className="mb-4 max-w-3xl rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <input
               required

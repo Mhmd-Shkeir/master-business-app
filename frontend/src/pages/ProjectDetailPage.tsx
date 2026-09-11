@@ -5,7 +5,7 @@ import { ErrorState } from "../components/ErrorState";
 import { SparkleIcon } from "../components/icons";
 import { RecordPaymentForm } from "../components/RecordPaymentForm";
 import { StatusBadge } from "../components/StatusBadge";
-import { useConfirmNote, useDraftEmail } from "../hooks/useAI";
+import { useAIQuery, useConfirmNote, useDraftEmail } from "../hooks/useAI";
 import {
   useAddExpense,
   useOverrideHold,
@@ -31,14 +31,33 @@ function extractError(err: unknown, fallback: string): string {
   return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
 }
 
-function AIAssistantPanel({ projectId }: { projectId: string }) {
+function AIAssistantPanel({ projectId, projectName }: { projectId: string; projectName: string }) {
   const draftEmail = useDraftEmail(projectId);
   const confirmNote = useConfirmNote(projectId);
+  const projectQuery = useAIQuery();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [drafted, setDrafted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [queryError, setQueryError] = useState<string | null>(null);
+
+  async function handleAsk(e: FormEvent) {
+    e.preventDefault();
+    if (!question.trim() || projectQuery.isPending) return;
+    setQueryError(null);
+    setAnswer(null);
+    try {
+      const result = await projectQuery.mutateAsync(
+        `Regarding the project "${projectName}" (ID: ${projectId}): ${question}`,
+      );
+      setAnswer(result.answer);
+    } catch (err) {
+      setQueryError(extractError(err, "Couldn't answer that right now."));
+    }
+  }
 
   async function handleDraft() {
     setError(null);
@@ -124,6 +143,29 @@ function AIAssistantPanel({ projectId }: { projectId: string }) {
 
       {confirmed && <p className="mt-2 text-xs text-emerald-600">Recorded to the Activity Timeline below.</p>}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      <div className="mt-4 border-t border-indigo-100 pt-4">
+        <p className="mb-2 text-xs font-medium text-indigo-700">Ask about this project</p>
+        <form onSubmit={handleAsk} className="flex gap-2">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="e.g. What's the outstanding balance?"
+            className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+          />
+          <button
+            type="submit"
+            disabled={projectQuery.isPending || !question.trim()}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {projectQuery.isPending ? "Asking..." : "Ask"}
+          </button>
+        </form>
+        {answer && (
+          <p className="mt-2 whitespace-pre-wrap rounded-md bg-white p-2 text-sm text-neutral-800 shadow-sm">{answer}</p>
+        )}
+        {queryError && <p className="mt-2 text-xs text-red-600">{queryError}</p>}
+      </div>
     </div>
   );
 }
@@ -360,13 +402,13 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl p-6">
+    <div className="animate-fade-in mx-auto max-w-4xl px-8 py-6">
       <Link to="/" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to dashboard
       </Link>
 
-      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-start justify-between">
+      <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between">
           <div className="flex-1">
             {editing ? (
               <input
@@ -400,7 +442,9 @@ export function ProjectDetailPage() {
             )}
           </div>
         </div>
+      </header>
 
+      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Overview</h2>
         <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
@@ -735,7 +779,7 @@ export function ProjectDetailPage() {
         {actionError && <p className="mb-4 text-sm text-red-600">{actionError}</p>}
 
         {/* AI Assistant */}
-        {!editing && <AIAssistantPanel projectId={project.id} />}
+        {!editing && <AIAssistantPanel projectId={project.id} projectName={project.projectName} />}
 
         {/* Activity timeline */}
         <div>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Avatar } from "../components/Avatar";
+import { PageHeader } from "../components/PageHeader";
 import { useChangePassword, useUpdateProfile } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 
@@ -68,11 +69,8 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-lg p-6">
-      <header className="mb-6">
-        <h1 className="text-lg font-semibold text-neutral-900">My Profile</h1>
-        <p className="text-sm text-neutral-400">Manage your account settings</p>
-      </header>
+    <div className="animate-fade-in mx-auto max-w-xl px-8 py-6">
+      <PageHeader title="My Profile" subtitle="Manage your account settings" />
 
       <div className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">

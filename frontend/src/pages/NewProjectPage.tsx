@@ -36,16 +36,18 @@ export function NewProjectPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-lg p-6">
+    <div className="animate-fade-in mx-auto max-w-xl px-8 py-6">
       <Link to="/" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to dashboard
       </Link>
-      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <h1 className="mb-1 text-lg font-semibold text-neutral-900">New Project (RFQ)</h1>
-        <p className="mb-4 text-sm text-neutral-400">
+      <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+        <h1 className="text-lg font-semibold text-neutral-900">New Project (RFQ)</h1>
+        <p className="text-sm text-neutral-400">
           A supplier and cost aren't known yet at this stage — those get added later via Edit, once
           Procurement has sourced a quote.
         </p>
+      </header>
+      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm text-neutral-600">Project Name</label>
