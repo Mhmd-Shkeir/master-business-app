@@ -181,3 +181,13 @@ export function InboxIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function WarningIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4.5l9 15.5H3l9-15.5z" />
+      <line x1="12" y1="9.5" x2="12" y2="14" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </Icon>
+  );
+}

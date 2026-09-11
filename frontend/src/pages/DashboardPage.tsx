@@ -3,7 +3,17 @@ import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
-import { CheckCircleIcon, ChevronRightIcon, ClockIcon, DollarIcon, InboxIcon, PaymentsIcon, ProjectsIcon, SparkleIcon } from "../components/icons";
+import {
+  CheckCircleIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  DollarIcon,
+  InboxIcon,
+  PaymentsIcon,
+  ProjectsIcon,
+  SparkleIcon,
+  WarningIcon,
+} from "../components/icons";
 import { Skeleton } from "../components/Skeleton";
 import { StatusBadge } from "../components/StatusBadge";
 import { useDailyBrief } from "../hooks/useAI";
@@ -31,7 +41,7 @@ function DailyBriefCard() {
   }
 
   return (
-    <section className="mb-8 rounded-xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
+    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-700">
           <SparkleIcon className="h-3.5 w-3.5" />
@@ -52,7 +62,7 @@ function DailyBriefCard() {
       ) : (
         !error && <p className="text-sm text-neutral-400">Generate a summary of what needs attention today.</p>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -163,21 +173,74 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
 }
 
 function AttentionBadges({ project }: { project: ProjectSummary }) {
-  const badges: { label: string; className: string }[] = [];
+  const badges: { label: string; className: string; icon?: ReactNode }[] = [];
   if (project.needsAttention.overdue) badges.push({ label: "Overdue", className: "bg-red-100 text-red-700" });
   if (project.needsAttention.blockedShipment)
     badges.push({ label: "Payment Hold", className: "bg-red-100 text-red-700" });
-  if (project.needsAttention.lowMargin) badges.push({ label: "Low Margin", className: "bg-amber-100 text-amber-700" });
+  if (project.needsAttention.lowMargin)
+    badges.push({
+      label: "Low Margin",
+      className: "bg-amber-100 text-amber-700",
+      icon: <WarningIcon className="h-3 w-3" />,
+    });
   if (project.needsAttention.missingNextAction)
     badges.push({ label: "No Next Action", className: "bg-neutral-200 text-neutral-700" });
 
   return (
     <div className="flex flex-wrap justify-end gap-1.5">
       {badges.map((b) => (
-        <span key={b.label} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${b.className}`}>
+        <span
+          key={b.label}
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${b.className}`}
+        >
+          {b.icon}
           {b.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+function AlertsStrip({
+  overdueCount,
+  lowMarginCount,
+  holdCount,
+}: {
+  overdueCount: number;
+  lowMarginCount: number;
+  holdCount: number;
+}) {
+  if (overdueCount === 0 && lowMarginCount === 0 && holdCount === 0) return null;
+
+  return (
+    <div className="mb-8 flex flex-wrap items-center gap-2">
+      {overdueCount > 0 && (
+        <a
+          href="#attention"
+          className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          Overdue — {overdueCount} project{overdueCount === 1 ? "" : "s"}
+        </a>
+      )}
+      {holdCount > 0 && (
+        <a
+          href="#attention"
+          className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          Payment Hold — {holdCount}
+        </a>
+      )}
+      {lowMarginCount > 0 && (
+        <a
+          href="#attention"
+          className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+        >
+          <WarningIcon className="h-3.5 w-3.5" />
+          Low Margin — {lowMarginCount}
+        </a>
+      )}
     </div>
   );
 }
@@ -234,6 +297,9 @@ export function DashboardPage() {
   const payablesDueByCurrency = groupByCurrency(active, "supplierBalance");
 
   const attention = active.filter((p) => p.needsAttention.any);
+  const overdueCount = active.filter((p) => p.needsAttention.overdue).length;
+  const lowMarginCount = active.filter((p) => p.needsAttention.lowMargin).length;
+  const holdCount = active.filter((p) => p.needsAttention.blockedShipment).length;
   const recent = [...active].sort((a, b) => b.lastUpdate.localeCompare(a.lastUpdate)).slice(0, 5);
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
@@ -258,12 +324,25 @@ export function DashboardPage() {
         )}
       </header>
 
-      <DailyBriefCard />
+      <nav className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+        <a href="#overview" className="hover:text-neutral-600">
+          Overview
+        </a>
+        <a href="#attention" className="hover:text-neutral-600">
+          Attention
+        </a>
+        <a href="#pipeline" className="hover:text-neutral-600">
+          Pipeline
+        </a>
+        <a href="#projects" className="hover:text-neutral-600">
+          Projects
+        </a>
+      </nav>
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
       {isLoading ? (
-        <section className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <section id="overview" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <Skeleton className="mb-2 h-3 w-20" />
@@ -272,7 +351,7 @@ export function DashboardPage() {
           ))}
         </section>
       ) : (
-        <section className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <section id="overview" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
             <div className="mb-1 flex items-start justify-between">
               <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
@@ -303,15 +382,10 @@ export function DashboardPage() {
         </section>
       )}
 
-      {!isLoading && active.length > 0 && (
-        <section className={`mb-8 grid grid-cols-1 gap-4 ${user?.role === "ADMIN" ? "lg:grid-cols-2" : ""}`}>
-          <ProjectPipeline projects={active} />
-          {user?.role === "ADMIN" && <MarginHealth projects={active} />}
-        </section>
-      )}
+      <AlertsStrip overdueCount={overdueCount} lowMarginCount={lowMarginCount} holdCount={holdCount} />
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+      <section id="attention">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-700">
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
         </h2>
         {attention.length === 0 && !isLoading ? (
@@ -351,7 +425,17 @@ export function DashboardPage() {
         )}
       </section>
 
-      <section className="mt-8">
+      <section id="pipeline" className="mt-8">
+        <DailyBriefCard />
+        {!isLoading && active.length > 0 && (
+          <div className={`grid grid-cols-1 gap-4 ${user?.role === "ADMIN" ? "lg:grid-cols-2" : ""}`}>
+            <ProjectPipeline projects={active} />
+            {user?.role === "ADMIN" && <MarginHealth projects={active} />}
+          </div>
+        )}
+      </section>
+
+      <section id="projects" className="mt-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Recent Projects</h2>
           <Link to="/projects" className="text-sm font-medium text-neutral-500 hover:text-neutral-900">
