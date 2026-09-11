@@ -151,7 +151,7 @@ function AIAssistantPanel({ projectId, projectName }: { projectId: string; proje
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="e.g. What's the outstanding balance?"
-            className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            className="min-w-0 flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
           />
           <button
             type="submit"
