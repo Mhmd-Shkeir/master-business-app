@@ -338,11 +338,12 @@ export function DashboardPage() {
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
   const showPayables = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
+  const kpiCardCount = 3 + (showPayments ? 1 : 0) + (showPayables ? 1 : 0);
 
   return (
-    <div className="animate-fade-in w-full p-6">
+    <div className="animate-fade-in w-full px-8 py-6">
       <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">
               {greeting()}, {user?.name.split(" ")[0]}
@@ -350,42 +351,45 @@ export function DashboardPage() {
             </h1>
             <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
           </div>
-          {(user?.role === "ADMIN" || user?.role === "SALES") && (
-            <Link
-              to="/projects/new"
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-            >
-              + New Project
-            </Link>
-          )}
-        </div>
 
-        <nav className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
-          <a
-            href="#overview"
-            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
-          >
-            Overview
-          </a>
-          <a
-            href="#attention"
-            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
-          >
-            Attention
-          </a>
-          <a
-            href="#pipeline"
-            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
-          >
-            Pipeline
-          </a>
-          <a
-            href="#projects"
-            className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
-          >
-            Projects
-          </a>
-        </nav>
+          <div className="flex items-center gap-3">
+            <nav className="inline-flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
+              <a
+                href="#overview"
+                className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
+              >
+                Overview
+              </a>
+              <a
+                href="#attention"
+                className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
+              >
+                Attention
+              </a>
+              <a
+                href="#pipeline"
+                className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
+              >
+                Pipeline
+              </a>
+              <a
+                href="#projects"
+                className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
+              >
+                Projects
+              </a>
+            </nav>
+
+            {(user?.role === "ADMIN" || user?.role === "SALES") && (
+              <Link
+                to="/projects/new"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              >
+                + New Project
+              </Link>
+            )}
+          </div>
+        </div>
       </header>
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
@@ -405,8 +409,8 @@ export function DashboardPage() {
       <section id="overview" className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
+            {Array.from({ length: kpiCardCount }).map((_, i) => (
               <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
                 <Skeleton className="mb-2 h-3 w-20" />
                 <Skeleton className="h-7 w-14" />
@@ -414,7 +418,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
                 <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
