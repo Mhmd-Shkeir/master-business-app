@@ -352,8 +352,8 @@ export function DashboardPage() {
             <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <nav className="inline-flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <nav className="inline-flex flex-wrap items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
               <a
                 href="#overview"
                 className="rounded-md px-3 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-sm"
@@ -409,7 +409,7 @@ export function DashboardPage() {
       <section id="overview" className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
         {isLoading ? (
-          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
+          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             {Array.from({ length: kpiCardCount }).map((_, i) => (
               <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
                 <Skeleton className="mb-2 h-3 w-20" />
@@ -418,7 +418,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
+          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
                 <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
@@ -535,6 +535,7 @@ export function DashboardPage() {
           </Link>
         </div>
         <div className="overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
               <tr>
@@ -595,6 +596,7 @@ export function DashboardPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>
