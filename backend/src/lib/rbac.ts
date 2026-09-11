@@ -108,16 +108,31 @@ export function filterFinancialsForRole(
 
 const MARGIN_ALERT_THRESHOLD = 20;
 
-/** Shared "what needs attention today" computation — used by the Dashboard/Projects
- * serialization and by the AI Daily Brief, so the two can never disagree. */
+/**
+ * Shared "what needs attention today" computation — used by the Dashboard/Projects
+ * serialization and by the AI Daily Brief, so the two can never disagree.
+ *
+ * `lowMargin` and `blockedShipment` are gated by role, not just the raw figures
+ * they're derived from. A bare true/false is itself a leak of hidden financial
+ * data — telling a Sales user "this project has low margin" reveals something
+ * about a supplier cost they're not authorized to see, the same way telling a
+ * Procurement user "shipment is blocked on an unpaid balance" reveals something
+ * about customer revenue they're not authorized to see. Both are computed from
+ * the full (role-independent) financials so the underlying numbers stay correct
+ * — they're just forced to `false` before being handed back to a role that
+ * can't see the data they'd be revealing.
+ */
 export function needsAttention(
   project: { status: ProjectStatus; dueDate: Date | null; nextAction: string | null },
   financials: ReturnType<typeof computeFinancials>,
+  role: AuthUser["role"],
 ) {
   const overdue = Boolean(project.dueDate && project.dueDate < new Date() && project.status !== "CLOSED");
   const missingNextAction = !project.nextAction && project.status !== "CLOSED";
-  const lowMargin = financials?.marginPercent != null && financials.marginPercent < MARGIN_ALERT_THRESHOLD;
-  const blockedShipment = Boolean(project.status === "SHIPPING" && financials && financials.customerBalance > 0);
+  const lowMargin =
+    canSeeMargin(role) && financials?.marginPercent != null && financials.marginPercent < MARGIN_ALERT_THRESHOLD;
+  const blockedShipment =
+    canSeeRevenue(role) && Boolean(project.status === "SHIPPING" && financials && financials.customerBalance > 0);
 
   return {
     overdue,
