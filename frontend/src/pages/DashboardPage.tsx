@@ -131,17 +131,20 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
     {
       label: "Healthy ≥25%",
       bar: "bg-emerald-500",
+      emphasize: false,
       count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) >= 25).length,
     },
     {
       label: "Moderate 20–25%",
       bar: "bg-amber-500",
+      emphasize: false,
       count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) >= 20 && (p.financial!.marginPercent ?? 0) < 25)
         .length,
     },
     {
       label: "Low <20%",
       bar: "bg-red-500",
+      emphasize: true,
       count: withMargin.filter((p) => (p.financial!.marginPercent ?? 0) < 20).length,
     },
   ];
@@ -159,11 +162,17 @@ function MarginHealth({ projects }: { projects: ProjectSummary[] }) {
         <div className="space-y-2.5">
           {buckets.map((b) => (
             <div key={b.label} className="flex items-center gap-3 text-xs">
-              <span className="w-32 shrink-0 text-neutral-500">{b.label}</span>
+              <span className={`w-32 shrink-0 ${b.emphasize ? "font-semibold text-red-600" : "text-neutral-500"}`}>
+                {b.label}
+              </span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
                 <div className={`h-full rounded-full ${b.bar}`} style={{ width: `${(b.count / total) * 100}%` }} />
               </div>
-              <span className="w-4 shrink-0 text-right font-medium text-neutral-700">{b.count}</span>
+              <span
+                className={`w-4 shrink-0 text-right font-medium ${b.emphasize ? "font-semibold text-red-600" : "text-neutral-700"}`}
+              >
+                {b.count}
+              </span>
             </div>
           ))}
         </div>
@@ -201,47 +210,38 @@ function AttentionBadges({ project }: { project: ProjectSummary }) {
   );
 }
 
-function AlertsStrip({
-  overdueCount,
-  lowMarginCount,
-  holdCount,
+function AttentionCard({
+  label,
+  count,
+  icon,
+  tone,
 }: {
-  overdueCount: number;
-  lowMarginCount: number;
-  holdCount: number;
+  label: string;
+  count: number;
+  icon: ReactNode;
+  tone: "red" | "amber" | "neutral";
 }) {
-  if (overdueCount === 0 && lowMarginCount === 0 && holdCount === 0) return null;
+  const active = count > 0;
+  const iconTint =
+    active && tone === "red"
+      ? "bg-red-50 text-red-600"
+      : active && tone === "amber"
+        ? "bg-amber-50 text-amber-600"
+        : "bg-neutral-100 text-neutral-400";
+  const countTint =
+    active && tone === "red" ? "text-red-600" : active && tone === "amber" ? "text-amber-600" : "text-neutral-900";
 
   return (
-    <div className="mb-8 flex flex-wrap items-center gap-2">
-      {overdueCount > 0 && (
-        <a
-          href="#attention"
-          className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-          Overdue — {overdueCount} project{overdueCount === 1 ? "" : "s"}
-        </a>
-      )}
-      {holdCount > 0 && (
-        <a
-          href="#attention"
-          className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-          Payment Hold — {holdCount}
-        </a>
-      )}
-      {lowMarginCount > 0 && (
-        <a
-          href="#attention"
-          className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
-        >
-          <WarningIcon className="h-3.5 w-3.5" />
-          Low Margin — {lowMarginCount}
-        </a>
-      )}
-    </div>
+    <a
+      href="#attention"
+      className="block rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+    >
+      <div className="mb-1 flex items-start justify-between">
+        <p className="text-xs font-medium text-neutral-500">{label}</p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconTint}`}>{icon}</span>
+      </div>
+      <p className={`text-2xl font-semibold ${countTint}`}>{count}</p>
+    </a>
   );
 }
 
@@ -250,6 +250,10 @@ function greeting(): string {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
+}
+
+function formatLongDate(): string {
+  return new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
 const SUBTITLE: Record<string, string> = {
@@ -299,7 +303,7 @@ export function DashboardPage() {
   const attention = active.filter((p) => p.needsAttention.any);
   const overdueCount = active.filter((p) => p.needsAttention.overdue).length;
   const lowMarginCount = active.filter((p) => p.needsAttention.lowMargin).length;
-  const holdCount = active.filter((p) => p.needsAttention.blockedShipment).length;
+  const missingNextActionCount = active.filter((p) => p.needsAttention.missingNextAction).length;
   const recent = [...active].sort((a, b) => b.lastUpdate.localeCompare(a.lastUpdate)).slice(0, 5);
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
@@ -307,43 +311,60 @@ export function DashboardPage() {
 
   return (
     <div className="animate-fade-in mx-auto max-w-5xl p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-neutral-900">
-            {greeting()}, {user?.name.split(" ")[0]}
-          </h1>
-          <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
+      <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold text-neutral-900">
+              {greeting()}, {user?.name.split(" ")[0]}
+              <span className="ml-2 font-normal text-neutral-400">— {formatLongDate()}</span>
+            </h1>
+            <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
+          </div>
+          {(user?.role === "ADMIN" || user?.role === "SALES") && (
+            <Link
+              to="/projects/new"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            >
+              + New Project
+            </Link>
+          )}
         </div>
-        {(user?.role === "ADMIN" || user?.role === "SALES") && (
-          <Link
-            to="/projects/new"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+
+        <nav className="mt-4 flex flex-wrap items-center gap-1 border-t border-neutral-100 pt-4">
+          <a
+            href="#overview"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
           >
-            + New Project
-          </Link>
-        )}
+            Overview
+          </a>
+          <a
+            href="#attention"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            Attention
+          </a>
+          <a
+            href="#pipeline"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            Pipeline
+          </a>
+          <a
+            href="#projects"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            Projects
+          </a>
+        </nav>
       </header>
 
-      <nav className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
-        <a href="#overview" className="hover:text-neutral-600">
-          Overview
-        </a>
-        <a href="#attention" className="hover:text-neutral-600">
-          Attention
-        </a>
-        <a href="#pipeline" className="hover:text-neutral-600">
-          Pipeline
-        </a>
-        <a href="#projects" className="hover:text-neutral-600">
-          Projects
-        </a>
-      </nav>
+      <DailyBriefCard />
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
       {isLoading ? (
         <section id="overview" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <Skeleton className="mb-2 h-3 w-20" />
               <Skeleton className="h-7 w-14" />
@@ -379,10 +400,21 @@ export function DashboardPage() {
           {showPayables && (
             <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
           )}
+          <AttentionCard label="Overdue" count={overdueCount} icon={<ClockIcon className="h-4 w-4" />} tone="red" />
+          <AttentionCard
+            label="Missing Next Action"
+            count={missingNextActionCount}
+            icon={<InboxIcon className="h-4 w-4" />}
+            tone="neutral"
+          />
+          <AttentionCard
+            label="Low Margin"
+            count={lowMarginCount}
+            icon={<WarningIcon className="h-4 w-4" />}
+            tone="amber"
+          />
         </section>
       )}
-
-      <AlertsStrip overdueCount={overdueCount} lowMarginCount={lowMarginCount} holdCount={holdCount} />
 
       <section id="attention">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-700">
@@ -426,7 +458,6 @@ export function DashboardPage() {
       </section>
 
       <section id="pipeline" className="mt-8">
-        <DailyBriefCard />
         {!isLoading && active.length > 0 && (
           <div className={`grid grid-cols-1 gap-4 ${user?.role === "ADMIN" ? "lg:grid-cols-2" : ""}`}>
             <ProjectPipeline projects={active} />
