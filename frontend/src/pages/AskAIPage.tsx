@@ -106,9 +106,12 @@ export function AskAIPage() {
 
       <div className="flex-1 space-y-4 overflow-y-auto pb-4">
         {turns.length === 0 && (
-          <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-6">
+          <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+            <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <SparkleIcon className="h-5 w-5" />
+            </span>
             <p className="mb-3 text-sm text-neutral-500">Try asking:</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
@@ -128,28 +131,38 @@ export function AskAIPage() {
             <div className="ml-auto max-w-[85%] rounded-xl rounded-tr-sm bg-indigo-600 px-4 py-2 text-sm text-white">
               {t.question}
             </div>
-            <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 shadow-sm">
-              <p className="whitespace-pre-wrap">{t.answer}</p>
-              {t.groundedOn.length > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-x-1 border-t border-neutral-100 pt-2 text-xs text-neutral-400">
-                  <span>Grounded on:</span>
-                  {t.groundedOn.map((g, gi) => (
-                    <span key={g.id}>
-                      <Link to={`/projects/${g.id}`} className="text-indigo-600 hover:underline">
-                        {g.name}
-                      </Link>
-                      {gi < t.groundedOn.length - 1 && ","}
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                <SparkleIcon className="h-3.5 w-3.5" />
+              </span>
+              <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 shadow-sm">
+                <p className="whitespace-pre-wrap">{t.answer}</p>
+                {t.groundedOn.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-1 border-t border-neutral-100 pt-2 text-xs text-neutral-400">
+                    <span>Grounded on:</span>
+                    {t.groundedOn.map((g, gi) => (
+                      <span key={g.id}>
+                        <Link to={`/projects/${g.id}`} className="text-indigo-600 hover:underline">
+                          {g.name}
+                        </Link>
+                        {gi < t.groundedOn.length - 1 && ","}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
 
         {query.isPending && (
-          <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-400 shadow-sm">
-            Thinking...
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <SparkleIcon className="h-3.5 w-3.5" />
+            </span>
+            <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-400 shadow-sm">
+              Thinking...
+            </div>
           </div>
         )}
       </div>

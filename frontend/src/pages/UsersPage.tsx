@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { Avatar } from "../components/Avatar";
 import { ErrorState } from "../components/ErrorState";
-import { InboxIcon } from "../components/icons";
+import { InboxIcon, ShieldIcon } from "../components/icons";
 import { PageHeader } from "../components/PageHeader";
 import { useCreateUser, useUsers } from "../hooks/useUsers";
 import type { Role } from "../lib/types";
@@ -10,6 +11,12 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin",
   SALES: "Sales",
   PROCUREMENT: "Procurement",
+};
+
+const ROLE_BADGE: Record<string, string> = {
+  ADMIN: "bg-indigo-100 text-indigo-700",
+  SALES: "bg-blue-100 text-blue-700",
+  PROCUREMENT: "bg-violet-100 text-violet-700",
 };
 
 function extractError(err: unknown, fallback: string): string {
@@ -40,11 +47,33 @@ export function UsersPage() {
     }
   }
 
+  const roleCounts = {
+    ADMIN: (users ?? []).filter((u) => u.role === "ADMIN").length,
+    SALES: (users ?? []).filter((u) => u.role === "SALES").length,
+    PROCUREMENT: (users ?? []).filter((u) => u.role === "PROCUREMENT").length,
+  };
+
   return (
     <div className="animate-fade-in w-full px-8 py-6">
       <PageHeader title="Users" subtitle="Manage internal team accounts and roles" />
 
       {error && <ErrorState message="Failed to load users." onRetry={() => refetch()} />}
+
+      {!isLoading && (users?.length ?? 0) > 0 && (
+        <div className="mb-6 grid grid-cols-3 gap-4 sm:max-w-lg">
+          {(["ADMIN", "SALES", "PROCUREMENT"] as const).map((r) => (
+            <div key={r} className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
+              <div className="mb-1 flex items-start justify-between">
+                <p className="text-xs font-medium text-neutral-500">{ROLE_LABEL[r]}</p>
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-100 text-neutral-400">
+                  <ShieldIcon className="h-3.5 w-3.5" />
+                </span>
+              </div>
+              <p className="text-xl font-semibold text-neutral-900">{roleCounts[r]}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-6 overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
         <table className="w-full text-sm">
@@ -69,9 +98,18 @@ export function UsersPage() {
             )}
             {users?.map((u) => (
               <tr key={u.id} className="border-t border-neutral-100 hover:bg-neutral-50">
-                <td className="px-4 py-2.5 font-medium text-neutral-900">{u.name}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-2 font-medium text-neutral-900">
+                    <Avatar name={u.name} />
+                    {u.name}
+                  </div>
+                </td>
                 <td className="px-4 py-2.5 text-neutral-600">{u.email}</td>
-                <td className="px-4 py-2.5 text-neutral-600">{ROLE_LABEL[u.role]}</td>
+                <td className="px-4 py-2.5">
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ROLE_BADGE[u.role]}`}>
+                    {ROLE_LABEL[u.role]}
+                  </span>
+                </td>
                 <td className="px-4 py-2.5 text-neutral-600">{formatDate(u.createdAt)}</td>
               </tr>
             ))}
