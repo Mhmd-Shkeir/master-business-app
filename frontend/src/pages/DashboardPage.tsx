@@ -58,7 +58,7 @@ function DailyBriefCard() {
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {dailyBrief.data ? (
-        <p className="line-clamp-4 whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
+        <p className="whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
       ) : (
         !error && <p className="text-sm text-neutral-400">Generate a summary of what needs attention today.</p>
       )}
@@ -221,22 +221,27 @@ function AttentionSummaryCard({
   missingNextActionCount: number;
   holdCount: number;
 }) {
-  const breakdown = [
-    overdueCount > 0 && `${overdueCount} overdue`,
-    lowMarginCount > 0 && `${lowMarginCount} low margin`,
-    missingNextActionCount > 0 && `${missingNextActionCount} missing next action`,
-    holdCount > 0 && `${holdCount} payment hold`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const hasAttention = overdueCount + lowMarginCount + missingNextActionCount + holdCount > 0;
+  const segments = [
+    overdueCount > 0 && { text: `${overdueCount} overdue`, className: "text-red-600" },
+    holdCount > 0 && { text: `${holdCount} payment hold`, className: "text-red-600" },
+    lowMarginCount > 0 && { text: `${lowMarginCount} low margin (<20%)`, className: "text-amber-600" },
+    missingNextActionCount > 0 && { text: `${missingNextActionCount} missing next action`, className: "text-neutral-700" },
+  ].filter((s): s is { text: string; className: string } => Boolean(s));
+  const hasAttention = segments.length > 0;
 
   return (
     <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
       <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Needs My Attention</h2>
       {hasAttention ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-neutral-600">{breakdown}</p>
+          <p className="text-base font-semibold">
+            {segments.map((s, i) => (
+              <span key={s.text}>
+                {i > 0 && <span className="text-neutral-300"> · </span>}
+                <span className={s.className}>{s.text}</span>
+              </span>
+            ))}
+          </p>
           <a href="#attention" className="shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-700">
             Review →
           </a>
@@ -268,7 +273,17 @@ const SUBTITLE: Record<string, string> = {
   PROCUREMENT: "Procurement Overview",
 };
 
-function CurrencyCard({ label, amounts, icon }: { label: string; amounts: Map<string, number>; icon: ReactNode }) {
+function CurrencyCard({
+  label,
+  amounts,
+  icon,
+  subtitle,
+}: {
+  label: string;
+  amounts: Map<string, number>;
+  icon: ReactNode;
+  subtitle?: string;
+}) {
   return (
     <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
       <div className="mb-1 flex items-start justify-between">
@@ -290,6 +305,7 @@ function CurrencyCard({ label, amounts, icon }: { label: string; amounts: Map<st
           ))}
         </div>
       )}
+      {subtitle && <p className="mt-0.5 text-xs text-neutral-400">{subtitle}</p>}
     </div>
   );
 }
@@ -301,10 +317,17 @@ export function DashboardPage() {
   const active = projects ?? [];
   const activeRfqs = active.filter((p) => p.status === "RFQ").length;
   const pendingQuotes = active.filter((p) => p.status === "QUOTED").length;
-  const activeOrders = active.filter((p) => p.status === "ORDERED" || p.status === "SHIPPING").length;
+  const orderedCount = active.filter((p) => p.status === "ORDERED").length;
+  const shippingCount = active.filter((p) => p.status === "SHIPPING").length;
+  const activeOrders = orderedCount + shippingCount;
+
+  const rfqsWithoutNextAction = active.filter((p) => p.status === "RFQ" && p.needsAttention.missingNextAction).length;
+  const quotesOverdue = active.filter((p) => p.status === "QUOTED" && p.needsAttention.overdue).length;
 
   const paymentsDueByCurrency = groupByCurrency(active, "customerBalance");
   const payablesDueByCurrency = groupByCurrency(active, "supplierBalance");
+  const paymentsDueProjectCount = active.filter((p) => (p.financial?.customerBalance ?? 0) > 0).length;
+  const payablesDueProjectCount = active.filter((p) => (p.financial?.supplierBalance ?? 0) > 0).length;
 
   const attention = active.filter((p) => p.needsAttention.any);
   const overdueCount = active.filter((p) => p.needsAttention.overdue).length;
@@ -317,7 +340,7 @@ export function DashboardPage() {
   const showPayables = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
   return (
-    <div className="animate-fade-in mx-auto max-w-5xl p-6">
+    <div className="animate-fade-in w-full p-6">
       <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -368,7 +391,7 @@ export function DashboardPage() {
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
       {!isLoading && (
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mb-8 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
           <AttentionSummaryCard
             overdueCount={overdueCount}
             lowMarginCount={lowMarginCount}
@@ -398,6 +421,9 @@ export function DashboardPage() {
                 <IconBadge icon={<ProjectsIcon className="h-4 w-4" />} />
               </div>
               <p className="text-2xl font-semibold text-neutral-900">{activeRfqs}</p>
+              {rfqsWithoutNextAction > 0 && (
+                <p className="mt-0.5 text-xs text-neutral-400">{rfqsWithoutNextAction} without next action</p>
+              )}
             </div>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
@@ -405,6 +431,7 @@ export function DashboardPage() {
                 <IconBadge icon={<ClockIcon className="h-4 w-4" />} />
               </div>
               <p className="text-2xl font-semibold text-neutral-900">{pendingQuotes}</p>
+              {quotesOverdue > 0 && <p className="mt-0.5 text-xs text-neutral-400">{quotesOverdue} overdue</p>}
             </div>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
@@ -412,12 +439,35 @@ export function DashboardPage() {
                 <IconBadge icon={<PaymentsIcon className="h-4 w-4" />} />
               </div>
               <p className="text-2xl font-semibold text-neutral-900">{activeOrders}</p>
+              {activeOrders > 0 && (
+                <p className="mt-0.5 text-xs text-neutral-400">
+                  {orderedCount} ordered · {shippingCount} shipping
+                </p>
+              )}
             </div>
             {showPayments && (
-              <CurrencyCard label="Payments Due" amounts={paymentsDueByCurrency} icon={<DollarIcon className="h-4 w-4" />} />
+              <CurrencyCard
+                label="Payments Due"
+                amounts={paymentsDueByCurrency}
+                icon={<DollarIcon className="h-4 w-4" />}
+                subtitle={
+                  paymentsDueProjectCount > 0
+                    ? `${paymentsDueProjectCount} project${paymentsDueProjectCount === 1 ? "" : "s"}`
+                    : undefined
+                }
+              />
             )}
             {showPayables && (
-              <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
+              <CurrencyCard
+                label="Payables Due"
+                amounts={payablesDueByCurrency}
+                icon={<InboxIcon className="h-4 w-4" />}
+                subtitle={
+                  payablesDueProjectCount > 0
+                    ? `${payablesDueProjectCount} project${payablesDueProjectCount === 1 ? "" : "s"}`
+                    : undefined
+                }
+              />
             )}
           </div>
         )}

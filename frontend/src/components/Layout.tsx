@@ -164,7 +164,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex h-screen min-w-0 flex-1 scroll-smooth flex-col overflow-y-auto">
         <main className="flex-1">{children}</main>
         <footer className="border-t border-neutral-200 bg-white">
           <div className="flex flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">
