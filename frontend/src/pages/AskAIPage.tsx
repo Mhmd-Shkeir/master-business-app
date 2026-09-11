@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { SendIcon, SparkleIcon, TrashIcon } from "../components/icons";
-import { useAIQuery } from "../hooks/useAI";
+import { PageHeader } from "../components/PageHeader";
+import { useAIQuery, type GroundedProject } from "../hooks/useAI";
 import { useAuth } from "../lib/auth-context";
 
 interface Turn {
   question: string;
   answer: string;
-  groundedOn: string[];
+  groundedOn: GroundedProject[];
 }
 
 function extractError(err: unknown, fallback: string): string {
@@ -20,7 +22,14 @@ function storageKey(userId: string | undefined): string {
 function readStoredTurns(userId: string | undefined): Turn[] {
   try {
     const raw = localStorage.getItem(storageKey(userId));
-    return raw ? (JSON.parse(raw) as Turn[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Turn[];
+    // Defensive: chats saved before groundedOn became {id, name}[] stored plain strings —
+    // drop those entries' grounding rather than crash rendering a Link with no id.
+    return parsed.map((t) => ({
+      ...t,
+      groundedOn: Array.isArray(t.groundedOn) ? t.groundedOn.filter((g): g is GroundedProject => typeof g === "object" && g !== null && "id" in g) : [],
+    }));
   } catch {
     return [];
   }
@@ -72,28 +81,28 @@ export function AskAIPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto flex min-h-[70vh] max-w-3xl flex-col p-6">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-neutral-900">
+    <div className="animate-fade-in mx-auto flex min-h-[70vh] max-w-3xl flex-col px-8 py-6">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             <SparkleIcon className="h-5 w-5 text-indigo-600" />
             Ask My Business
-          </h1>
-          <p className="text-sm text-neutral-400">
-            Ask questions about your projects in plain English — grounded in your live data.
-          </p>
-        </div>
-        {turns.length > 0 && (
-          <button
-            type="button"
-            onClick={clearChat}
-            className="flex items-center gap-1.5 rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
-          >
-            <TrashIcon className="h-3.5 w-3.5" />
-            Clear Chat
-          </button>
-        )}
-      </header>
+          </span>
+        }
+        subtitle="Ask questions about your projects in plain English — grounded in your live data."
+        actions={
+          turns.length > 0 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              className="flex items-center gap-1.5 rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+              Clear Chat
+            </button>
+          )
+        }
+      />
 
       <div className="flex-1 space-y-4 overflow-y-auto pb-4">
         {turns.length === 0 && (
@@ -122,9 +131,17 @@ export function AskAIPage() {
             <div className="max-w-[85%] rounded-xl rounded-tl-sm border border-neutral-200/70 bg-white px-4 py-3 text-sm text-neutral-800 shadow-sm">
               <p className="whitespace-pre-wrap">{t.answer}</p>
               {t.groundedOn.length > 0 && (
-                <p className="mt-2 border-t border-neutral-100 pt-2 text-xs text-neutral-400">
-                  Grounded on: {t.groundedOn.join(", ")}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-1 border-t border-neutral-100 pt-2 text-xs text-neutral-400">
+                  <span>Grounded on:</span>
+                  {t.groundedOn.map((g, gi) => (
+                    <span key={g.id}>
+                      <Link to={`/projects/${g.id}`} className="text-indigo-600 hover:underline">
+                        {g.name}
+                      </Link>
+                      {gi < t.groundedOn.length - 1 && ","}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           </div>

@@ -62,13 +62,13 @@ export function CustomerDetailPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl p-6">
+    <div className="animate-fade-in mx-auto max-w-4xl px-8 py-6">
       <Link to="/customers" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to customers
       </Link>
 
-      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-start justify-between">
+      <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             {!editing && <Avatar name={customer.name} size="md" />}
             <div>
@@ -94,7 +94,9 @@ export function CustomerDetailPage() {
             </button>
           )}
         </div>
+      </header>
 
+      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
           {(["contactName", "contactEmail", "country", "paymentTerms"] as const).map((key) => (
             <div key={key}>

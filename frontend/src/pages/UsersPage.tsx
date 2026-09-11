@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { ErrorState } from "../components/ErrorState";
 import { InboxIcon } from "../components/icons";
+import { PageHeader } from "../components/PageHeader";
 import { useCreateUser, useUsers } from "../hooks/useUsers";
 import type { Role } from "../lib/types";
 import { formatDate } from "../lib/format";
@@ -40,11 +41,8 @@ export function UsersPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl p-6">
-      <header className="mb-6">
-        <h1 className="text-lg font-semibold text-neutral-900">Users</h1>
-        <p className="text-sm text-neutral-400">Manage internal team accounts and roles</p>
-      </header>
+    <div className="animate-fade-in w-full px-8 py-6">
+      <PageHeader title="Users" subtitle="Manage internal team accounts and roles" />
 
       {error && <ErrorState message="Failed to load users." onRetry={() => refetch()} />}
 
@@ -81,7 +79,7 @@ export function UsersPage() {
         </table>
       </div>
 
-      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
+      <div className="max-w-2xl rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">Add User</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">

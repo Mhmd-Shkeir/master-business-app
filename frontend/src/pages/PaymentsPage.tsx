@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ErrorState } from "../components/ErrorState";
+import { PageHeader } from "../components/PageHeader";
 import { RecordPaymentForm } from "../components/RecordPaymentForm";
 import { useProjects } from "../hooks/useProjects";
 import { groupByCurrency } from "../lib/aggregate";
@@ -29,7 +30,7 @@ function Section({
   return (
     <section className="mb-8">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">{title}</h2>
-      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:max-w-md">
         <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-neutral-500">Outstanding</p>
           {[...totalByCurrency.entries()].map(([c, v]) => (
@@ -98,11 +99,8 @@ export function PaymentsPage() {
   const showPayables = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
   return (
-    <div className="animate-fade-in mx-auto max-w-4xl p-6">
-      <header className="mb-6">
-        <h1 className="text-lg font-semibold text-neutral-900">Payments</h1>
-        <p className="text-sm text-neutral-400">Track receivables and payables across active projects</p>
-      </header>
+    <div className="animate-fade-in w-full px-8 py-6">
+      <PageHeader title="Payments" subtitle="Track receivables and payables across active projects" />
 
       {isLoading && <p className="text-sm text-neutral-400">Loading...</p>}
       {error && <ErrorState message="Failed to load payments." onRetry={() => refetch()} />}
