@@ -73,7 +73,7 @@ export async function buildDailyBrief(user: AuthUser & { name: string }) {
   const flagged = projects
     .map((p) => {
       const financials = computeFinancials(p.financial, sumExpenses(p.expenses));
-      const attention = needsAttention(p, financials);
+      const attention = needsAttention(p, financials, user.role);
       if (!attention.any) return null;
       return {
         projectName: p.projectName,
@@ -180,7 +180,7 @@ async function toolListProjects(args: Record<string, unknown>, user: AuthUser) {
   let mapped: { p: (typeof projects)[number]; financials: ReturnType<typeof computeFinancials>; attention: ReturnType<typeof needsAttention> }[] =
     projects.map((p) => {
       const financials = computeFinancials(p.financial, sumExpenses(p.expenses));
-      return { p, financials, attention: needsAttention(p, financials) };
+      return { p, financials, attention: needsAttention(p, financials, user.role) };
     });
 
   if (args.overdueOnly) mapped = mapped.filter((m) => m.attention.overdue);
@@ -251,7 +251,7 @@ async function toolGetProjectDetail(args: Record<string, unknown>, user: AuthUse
     nextAction: project.nextAction,
     description: project.description,
     financial: filterFinancialsForRole(financials, user.role),
-    needsAttention: needsAttention(project, financials),
+    needsAttention: needsAttention(project, financials, user.role),
     recentActivity: safeActivities.map((a) => ({ message: a.message, by: a.user?.name ?? "System", at: a.createdAt })),
   };
 }

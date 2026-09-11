@@ -20,9 +20,9 @@ function serializeProject(
   role: AuthUser["role"],
 ) {
   if (!project) return null;
-  // needsAttention.lowMargin depends on the correct (expense-inclusive) margin
-  // for every role, even though the marginPercent number itself is Admin-only —
-  // so expenses are always summed here, regardless of who's asking.
+  // Expenses are always summed into the margin calculation regardless of who's
+  // asking, so it stays correct even though needsAttention() below gates the
+  // resulting lowMargin/blockedShipment booleans to what `role` is allowed to see.
   const financials = computeFinancials(project.financial, sumExpenses(project.expenses));
 
   return {
@@ -42,7 +42,7 @@ function serializeProject(
       ? { id: project.supplier.id, name: project.supplier.name, country: project.supplier.country }
       : null,
     financial: filterFinancialsForRole(financials, role),
-    needsAttention: needsAttention(project, financials),
+    needsAttention: needsAttention(project, financials, role),
     shipmentHoldOverridden: project.shipmentHoldOverridden,
   };
 }
