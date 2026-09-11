@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
+import { AskAIBox } from "../components/AskAIBox";
 import { DueDate } from "../components/DueDate";
 import { ErrorState } from "../components/ErrorState";
 import { DownloadIcon, InboxIcon } from "../components/icons";
@@ -106,6 +107,8 @@ export function ProjectsPage() {
           </select>
         </div>
       </PageHeader>
+
+      <AskAIBox title="Ask AI about your projects" placeholder="e.g. Which projects are overdue?" />
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
