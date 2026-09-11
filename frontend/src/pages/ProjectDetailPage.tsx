@@ -415,8 +415,12 @@ export function ProjectDetailPage() {
                 onChange={(e) => setForm((s) => ({ ...s, nextAction: e.target.value }))}
                 className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
               />
+            ) : project.nextAction ? (
+              <p className="font-medium text-neutral-900">{project.nextAction}</p>
             ) : (
-              <p className="text-neutral-800">{project.nextAction ?? "—"}</p>
+              <span className="inline-block rounded-full bg-neutral-200 px-2.5 py-1 text-xs font-semibold text-neutral-700">
+                Not set
+              </span>
             )}
           </div>
           <div>
