@@ -34,20 +34,20 @@ function Section({
         <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-neutral-500">Outstanding</p>
           {[...totalByCurrency.entries()].map(([c, v]) => (
-            <p key={c} className="text-xl font-semibold text-neutral-900">
+            <p key={c} className="truncate text-lg font-semibold text-neutral-900 sm:text-xl">
               {formatCurrency(v, c)}
             </p>
           ))}
-          {totalByCurrency.size === 0 && <p className="text-xl font-semibold text-neutral-900">—</p>}
+          {totalByCurrency.size === 0 && <p className="truncate text-lg font-semibold text-neutral-900 sm:text-xl">—</p>}
         </div>
         <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-neutral-500">Total</p>
           {[...paidByCurrency.entries()].map(([c, v]) => (
-            <p key={c} className="text-xl font-semibold text-neutral-900">
+            <p key={c} className="truncate text-lg font-semibold text-neutral-900 sm:text-xl">
               {formatCurrency(v, c)}
             </p>
           ))}
-          {paidByCurrency.size === 0 && <p className="text-xl font-semibold text-neutral-900">—</p>}
+          {paidByCurrency.size === 0 && <p className="truncate text-lg font-semibold text-neutral-900 sm:text-xl">—</p>}
         </div>
       </div>
 
@@ -57,12 +57,12 @@ function Section({
         <div className="space-y-2">
           {outstanding.map((p) => (
             <div key={p.id} className="rounded-xl border border-neutral-200/70 bg-white p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Link to={`/projects/${p.id}`} className="text-sm font-medium text-neutral-900 hover:underline">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <Link to={`/projects/${p.id}`} className="truncate text-sm font-medium text-neutral-900 hover:underline">
                     {p.projectName}
                   </Link>
-                  <p className="text-xs text-neutral-500">
+                  <p className="truncate text-xs text-neutral-500">
                     {side === "customer" ? p.customer?.name : p.supplier?.name} ·{" "}
                     {formatCurrency(p.financial?.[balanceField], p.financial?.currency)} outstanding
                   </p>
@@ -71,7 +71,7 @@ function Section({
                   <button
                     type="button"
                     onClick={() => setOpenFor(p.id)}
-                    className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
+                    className="shrink-0 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700"
                   >
                     Record Payment
                   </button>

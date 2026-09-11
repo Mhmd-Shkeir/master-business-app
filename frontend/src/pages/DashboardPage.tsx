@@ -291,15 +291,15 @@ function CurrencyCard({
         <IconBadge icon={icon} tint="indigo" />
       </div>
       {amounts.size === 0 ? (
-        <p className="text-2xl font-semibold text-neutral-900">—</p>
+        <p className="text-xl font-semibold text-neutral-900 sm:text-2xl">—</p>
       ) : amounts.size === 1 ? (
-        <p className="text-2xl font-semibold text-indigo-600">
+        <p className="truncate text-xl font-semibold text-indigo-600 sm:text-2xl">
           {formatCurrency([...amounts.values()][0], [...amounts.keys()][0])}
         </p>
       ) : (
         <div className="space-y-0.5">
           {[...amounts.entries()].map(([currency, total]) => (
-            <p key={currency} className="text-lg font-semibold text-indigo-600">
+            <p key={currency} className="truncate text-base font-semibold text-indigo-600 sm:text-lg">
               {formatCurrency(total, currency)}
             </p>
           ))}
@@ -409,7 +409,7 @@ export function DashboardPage() {
       <section id="overview" className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
         {isLoading ? (
-          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             {Array.from({ length: kpiCardCount }).map((_, i) => (
               <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
                 <Skeleton className="mb-2 h-3 w-20" />
@@ -418,7 +418,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className={`grid grid-cols-2 gap-4 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
                 <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
@@ -492,23 +492,23 @@ export function DashboardPage() {
               <Link
                 key={p.id}
                 to={`/projects/${p.id}`}
-                className="flex items-center justify-between rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="flex flex-col gap-3 rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Avatar name={p.customer?.name ?? p.projectName} />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-neutral-900">{p.projectName}</p>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-medium text-neutral-900">{p.projectName}</p>
                       <StatusBadge status={p.status} />
                     </div>
-                    <p className="text-xs text-neutral-500">
+                    <p className="truncate text-xs text-neutral-500">
                       {p.customer?.name} · Due {formatDate(p.dueDate)}
                       {(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost) != null &&
                         ` · ${formatCurrency(p.financial?.estimatedRevenue ?? p.financial?.estimatedCost, p.financial?.currency)}`}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3 self-end sm:self-auto">
                   <AttentionBadges project={p} />
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-300" />
                 </div>
@@ -536,7 +536,7 @@ export function DashboardPage() {
         </div>
         <div className="overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[700px] text-sm">
             <thead className="bg-neutral-50 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-2.5">Project</th>
