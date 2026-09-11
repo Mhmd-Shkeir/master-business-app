@@ -210,7 +210,7 @@ function AttentionBadges({ project }: { project: ProjectSummary }) {
   );
 }
 
-function CriticalAttentionPanel({
+function AttentionSummaryCard({
   overdueCount,
   lowMarginCount,
   missingNextActionCount,
@@ -221,37 +221,31 @@ function CriticalAttentionPanel({
   missingNextActionCount: number;
   holdCount: number;
 }) {
-  const rows: { label: string; count: number; dot: string; text: string }[] = [
-    { label: "Overdue", count: overdueCount, dot: "bg-red-500", text: "text-red-700" },
-    { label: "Payment Hold", count: holdCount, dot: "bg-red-500", text: "text-red-700" },
-    { label: "Low Margin", count: lowMarginCount, dot: "bg-amber-500", text: "text-amber-700" },
-    { label: "Missing Next Action", count: missingNextActionCount, dot: "bg-neutral-400", text: "text-neutral-700" },
-  ].filter((r) => r.count > 0);
+  const breakdown = [
+    overdueCount > 0 && `${overdueCount} overdue`,
+    lowMarginCount > 0 && `${lowMarginCount} low margin`,
+    missingNextActionCount > 0 && `${missingNextActionCount} missing next action`,
+    holdCount > 0 && `${holdCount} payment hold`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const hasAttention = overdueCount + lowMarginCount + missingNextActionCount + holdCount > 0;
 
   return (
     <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-      <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Critical Attention</h2>
-      {rows.length === 0 ? (
+      <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Needs My Attention</h2>
+      {hasAttention ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-neutral-600">{breakdown}</p>
+          <a href="#attention" className="shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+            Review →
+          </a>
+        </div>
+      ) : (
         <p className="flex items-center gap-1.5 text-sm text-neutral-400">
           <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
           Nothing needs attention right now.
         </p>
-      ) : (
-        <div className="space-y-1.5">
-          {rows.map((r) => (
-            <a
-              key={r.label}
-              href="#attention"
-              className="flex items-center justify-between rounded-md px-1.5 py-1 text-sm hover:bg-neutral-50"
-            >
-              <span className="flex items-center gap-2 text-neutral-600">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.dot}`} />
-                {r.label}
-              </span>
-              <span className={`font-semibold ${r.text}`}>{r.count}</span>
-            </a>
-          ))}
-        </div>
       )}
     </div>
   );
@@ -317,14 +311,6 @@ export function DashboardPage() {
   const lowMarginCount = active.filter((p) => p.needsAttention.lowMargin).length;
   const missingNextActionCount = active.filter((p) => p.needsAttention.missingNextAction).length;
   const holdCount = active.filter((p) => p.needsAttention.blockedShipment).length;
-  const attentionBreakdown = [
-    overdueCount > 0 && `${overdueCount} overdue`,
-    lowMarginCount > 0 && `${lowMarginCount} low margin`,
-    missingNextActionCount > 0 && `${missingNextActionCount} missing next action`,
-    holdCount > 0 && `${holdCount} payment hold`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
   const recent = [...active].sort((a, b) => b.lastUpdate.localeCompare(a.lastUpdate)).slice(0, 5);
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
@@ -381,50 +367,9 @@ export function DashboardPage() {
 
       {error && <ErrorState message="Failed to load projects." onRetry={() => refetch()} />}
 
-      {isLoading ? (
-        <section id="overview" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
-              <Skeleton className="mb-2 h-3 w-20" />
-              <Skeleton className="h-7 w-14" />
-            </div>
-          ))}
-        </section>
-      ) : (
-        <section id="overview" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
-            <div className="mb-1 flex items-start justify-between">
-              <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
-              <IconBadge icon={<ProjectsIcon className="h-4 w-4" />} />
-            </div>
-            <p className="text-2xl font-semibold text-neutral-900">{activeRfqs}</p>
-          </div>
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
-            <div className="mb-1 flex items-start justify-between">
-              <p className="text-xs font-medium text-neutral-500">Pending Quotes</p>
-              <IconBadge icon={<ClockIcon className="h-4 w-4" />} />
-            </div>
-            <p className="text-2xl font-semibold text-neutral-900">{pendingQuotes}</p>
-          </div>
-          <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
-            <div className="mb-1 flex items-start justify-between">
-              <p className="text-xs font-medium text-neutral-500">Active Orders</p>
-              <IconBadge icon={<PaymentsIcon className="h-4 w-4" />} />
-            </div>
-            <p className="text-2xl font-semibold text-neutral-900">{activeOrders}</p>
-          </div>
-          {showPayments && (
-            <CurrencyCard label="Payments Due" amounts={paymentsDueByCurrency} icon={<DollarIcon className="h-4 w-4" />} />
-          )}
-          {showPayables && (
-            <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
-          )}
-        </section>
-      )}
-
       {!isLoading && (
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <CriticalAttentionPanel
+          <AttentionSummaryCard
             overdueCount={overdueCount}
             lowMarginCount={lowMarginCount}
             missingNextActionCount={missingNextActionCount}
@@ -434,13 +379,54 @@ export function DashboardPage() {
         </div>
       )}
 
+      <section id="overview" className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+                <Skeleton className="mb-2 h-3 w-20" />
+                <Skeleton className="h-7 w-14" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+              <div className="mb-1 flex items-start justify-between">
+                <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
+                <IconBadge icon={<ProjectsIcon className="h-4 w-4" />} />
+              </div>
+              <p className="text-2xl font-semibold text-neutral-900">{activeRfqs}</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+              <div className="mb-1 flex items-start justify-between">
+                <p className="text-xs font-medium text-neutral-500">Pending Quotes</p>
+                <IconBadge icon={<ClockIcon className="h-4 w-4" />} />
+              </div>
+              <p className="text-2xl font-semibold text-neutral-900">{pendingQuotes}</p>
+            </div>
+            <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+              <div className="mb-1 flex items-start justify-between">
+                <p className="text-xs font-medium text-neutral-500">Active Orders</p>
+                <IconBadge icon={<PaymentsIcon className="h-4 w-4" />} />
+              </div>
+              <p className="text-2xl font-semibold text-neutral-900">{activeOrders}</p>
+            </div>
+            {showPayments && (
+              <CurrencyCard label="Payments Due" amounts={paymentsDueByCurrency} icon={<DollarIcon className="h-4 w-4" />} />
+            )}
+            {showPayables && (
+              <CurrencyCard label="Payables Due" amounts={payablesDueByCurrency} icon={<InboxIcon className="h-4 w-4" />} />
+            )}
+          </div>
+        )}
+      </section>
+
       <section id="attention">
-        <h2 className="mb-1 text-base font-bold text-neutral-900">
+        <h2 className="mb-3 text-base font-bold text-neutral-900">
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
         </h2>
-        <p className="mb-3 min-h-[1rem] text-xs text-neutral-500">
-          {!isLoading && attentionBreakdown}
-        </p>
         {attention.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-400">
             <CheckCircleIcon className="h-6 w-6 text-emerald-500" />
