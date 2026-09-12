@@ -20,19 +20,48 @@ frontend/   React app
 docs/       Evaluation report + daily progress notes
 ```
 
-## Running locally
+## Prerequisites
+
+- **Node.js 20 or newer** (developed and tested on Node 22) and npm.
+- **A PostgreSQL database.** The free tier of [Supabase](https://supabase.com) works well and is what this project was built against — create a project there, no local Postgres install needed.
+- **An OpenAI-compatible API key**, for the AI features. [Groq](https://console.groq.com) has a free tier and is what this project was built and tested against; any OpenAI-compatible endpoint works by changing `AI_BASE_URL`/`AI_MODEL_ID`. The app still runs and every non-AI feature works without this — the AI endpoints just return a 503 until it's configured.
+- Git, to clone the repository.
+
+## Downloading and running locally
 
 ```bash
+git clone https://github.com/Mhmd-Shkeir/master-business-app.git
+cd master-business-app
 npm run install:all
-cp backend/.env.example backend/.env   # fill in DATABASE_URL, JWT_SECRET, AI_* keys
+```
+
+Then set up environment variables — copy each example file and fill in real values:
+
+```bash
+cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
+```
+
+- In `backend/.env`: set `DATABASE_URL`/`DIRECT_DATABASE_URL` to your Supabase project's **Session Pooler** connection string (Supabase dashboard → Connect → Connection string → Session pooler — see note below), set `JWT_SECRET` to any long random string, and set `AI_BASE_URL`/`AI_MODEL_ID`/`AI_API_KEY` to your AI provider's values (see comments in the file for a Groq-specific example).
+- `frontend/.env` only needs `VITE_API_BASE_URL`, which already defaults to `http://localhost:4000/api` — no change needed unless the backend runs elsewhere.
+
+Set up the database (run once, from the repo root):
+
+```bash
 cd backend && npx prisma migrate dev && npx prisma db seed && cd ..
+```
+
+This applies the schema and seeds demo data (3 users, 3 customers, 2 suppliers, several projects across every workflow stage — see [Demo accounts](#demo-accounts) below).
+
+Start both servers:
+
+```bash
 npm run dev
 ```
 
-This starts the backend on `http://localhost:4000` and the frontend on `http://localhost:5173`.
+This runs the backend on `http://localhost:4000` and the frontend on `http://localhost:5173` concurrently. Open `http://localhost:5173` and sign in with one of the demo accounts below.
 
-**Note on connection**: the database uses Supabase's Session Pooler connection string (not a direct connection) — direct connections default to IPv6, which isn't reachable from every network, and the paid IPv4 add-on isn't worth it for a free demo project. Session Pooler is Supabase's documented free, IPv4-compatible substitute for direct connections and behaves the same way for our long-running Express server.
+**Note on the database connection string**: use Supabase's **Session Pooler** connection string, not the direct connection — direct connections default to IPv6, which isn't reachable from every network, and the paid IPv4 add-on isn't worth it for a free demo project. Session Pooler is Supabase's documented free, IPv4-compatible substitute and behaves the same way for a long-running Express server.
 
 ## Demo accounts
 
