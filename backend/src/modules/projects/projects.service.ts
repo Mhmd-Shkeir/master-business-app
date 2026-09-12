@@ -187,6 +187,18 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 /**
+ * CLOSED is a finalized record: Sales/Procurement become read-only on it so a
+ * settled deal can't be quietly altered after the fact. Admin keeps edit access
+ * for exceptional corrections (e.g. a late invoice) — every such edit is still
+ * written to the Activity Timeline like any other change, so it stays audited.
+ */
+function assertEditableStatus(project: { status: ProjectStatus }, user: AuthUser) {
+  if (project.status === "CLOSED" && user.role !== "ADMIN") {
+    throw new AppError("This project is closed — only Admin can make further changes", 403);
+  }
+}
+
+/**
  * Edit permission mirrors field visibility: if a role can see a figure
  * (lib/rbac.ts), it can edit it — Sales owns the customer side, Procurement
  * owns the supplier side. Fields the caller can't touch are silently dropped
@@ -196,6 +208,7 @@ const FIELD_LABELS: Record<string, string> = {
  */
 export async function updateProject(projectId: string, patch: ProjectUpdateInput, user: AuthUser) {
   const project = await getProjectWithFinancial(projectId);
+  assertEditableStatus(project, user);
 
   const projectData: Record<string, unknown> = {};
   const financialData: Record<string, unknown> = {};
@@ -324,6 +337,7 @@ export async function recordPayment(
   }
 
   const project = await getProjectWithFinancial(projectId);
+  assertEditableStatus(project, user);
   const financials = computeFinancials(project.financial);
   const balance = side === "customer" ? (financials?.customerBalance ?? 0) : (financials?.supplierBalance ?? 0);
 
@@ -385,6 +399,7 @@ export async function addExpense(
   if (!project) {
     throw new AppError("Project not found", 404);
   }
+  assertEditableStatus(project, user);
   const currency = project.financial?.currency ?? "USD";
 
   await prisma.$transaction(async (tx) => {

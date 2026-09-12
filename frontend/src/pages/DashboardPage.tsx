@@ -234,7 +234,7 @@ function AttentionSummaryCard({
       <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Needs My Attention</h2>
       {hasAttention ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-base font-semibold">
+          <p className="text-sm font-semibold">
             {segments.map((s, i) => (
               <span key={s.text}>
                 {i > 0 && <span className="text-neutral-300"> · </span>}
@@ -478,7 +478,7 @@ export function DashboardPage() {
       </section>
 
       <section id="attention">
-        <h2 className="mb-3 text-base font-bold text-neutral-900">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
         </h2>
         {attention.length === 0 && !isLoading ? (

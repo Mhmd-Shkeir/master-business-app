@@ -99,6 +99,13 @@ model Project {
   financial   Financial?
   expenses    Expense[]
   activities  Activity[]
+
+  // Postgres doesn't auto-index foreign key columns (unlike MySQL) — these back
+  // frequent lookups: dashboard/AI status filters, and per-customer/supplier/owner views.
+  @@index([customerId])
+  @@index([supplierId])
+  @@index([ownerId])
+  @@index([status])
 }
 
 model Financial {
@@ -129,6 +136,8 @@ model Expense {
   note      String?
 
   createdAt DateTime @default(now())
+
+  @@index([projectId])
 }
 
 model Activity {
@@ -143,4 +152,7 @@ model Activity {
   message   String
 
   createdAt DateTime     @default(now())
+
+  @@index([projectId])
+  @@index([userId])
 }

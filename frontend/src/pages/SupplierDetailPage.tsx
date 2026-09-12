@@ -97,7 +97,7 @@ export function SupplierDetailPage() {
       </header>
 
       <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           {(["contactName", "contactEmail", "country", "paymentTerms"] as const).map((key) => (
             <div key={key}>
               <p className="text-neutral-400">

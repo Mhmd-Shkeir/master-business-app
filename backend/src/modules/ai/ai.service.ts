@@ -121,7 +121,7 @@ const TOOLS: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "list_projects",
-      description: "List projects, optionally filtered. Returns role-filtered financial data and currency-grouped subtotals — never a cross-currency combined total.",
+      description: "List projects, optionally filtered. Returns role-filtered financial data, each project's needsAttention flags, and currency-grouped subtotals — never a cross-currency combined total. A single call with no filters already returns every project with its attention flags; prefer that over calling this once per status.",
       parameters: {
         type: "object",
         properties: {
@@ -262,6 +262,18 @@ async function runTool(name: string, args: Record<string, unknown>, user: AuthUs
   return { error: `Unknown tool: ${name}` };
 }
 
+// Tool calls often fetch a broader set of projects than the model ends up
+// mentioning by name (e.g. it lists all projects, then only discusses two of
+// them). Grounding the UI's "Grounded on" links to every project ever seen by
+// a tool call — rather than the ones actually named in the answer — makes the
+// citations misleading. Filtering by whether the project's name appears in
+// the final answer text keeps citations honest at the cost of missing a
+// project the model paraphrased instead of naming outright.
+function groundedProjectsMentionedIn(answer: string, candidates: Map<string, string>): { id: string; name: string }[] {
+  const lower = answer.toLowerCase();
+  return [...candidates].filter(([, name]) => lower.includes(name.toLowerCase())).map(([id, name]) => ({ id, name }));
+}
+
 export async function runQuery(question: string, user: AuthUser & { name: string }) {
   const client = getClient();
   const messages: ChatCompletionMessageParam[] = [
@@ -269,9 +281,9 @@ export async function runQuery(question: string, user: AuthUser & { name: string
     { role: "user", content: question },
   ];
 
-  const groundedOn = new Map<string, string>();
+  const candidates = new Map<string, string>();
 
-  for (let round = 0; round < 3; round++) {
+  for (let round = 0; round < 6; round++) {
     const response = await client.chat.completions.create({
       model: env.AI_MODEL_ID!,
       messages,
@@ -283,10 +295,8 @@ export async function runQuery(question: string, user: AuthUser & { name: string
     if (!message) break;
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
-      return {
-        answer: stripMarkdown(message.content?.trim() || "I don't have an answer for that."),
-        groundedOn: [...groundedOn].map(([id, name]) => ({ id, name })),
-      };
+      const answer = stripMarkdown(message.content?.trim() || "I don't have an answer for that.");
+      return { answer, groundedOn: groundedProjectsMentionedIn(answer, candidates) };
     }
 
     messages.push(message);
@@ -301,19 +311,24 @@ export async function runQuery(question: string, user: AuthUser & { name: string
       }
       const result = await runTool(call.function.name, args, user);
       if (result && typeof result === "object" && "projects" in result) {
-        for (const p of (result as { projects: ToolProject[] }).projects) groundedOn.set(p.id, p.projectName);
+        for (const p of (result as { projects: ToolProject[] }).projects) candidates.set(p.id, p.projectName);
       } else if (result && typeof result === "object" && "found" in result && (result as { found: boolean }).found) {
         const r = result as { id: string; projectName: string };
-        groundedOn.set(r.id, r.projectName);
+        candidates.set(r.id, r.projectName);
       }
       messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
 
-  return {
-    answer: "I wasn't able to complete that request — try rephrasing your question.",
-    groundedOn: [...groundedOn].map(([id, name]) => ({ id, name })),
-  };
+  // Ran out of tool-call rounds — force a plain-text answer from whatever
+  // tool data was already gathered instead of failing outright.
+  const finalResponse = await client.chat.completions.create({
+    model: env.AI_MODEL_ID!,
+    messages: [...messages, { role: "user", content: "Answer now using only the information already gathered above." }],
+    tool_choice: "none",
+  });
+  const answer = stripMarkdown(finalResponse.choices[0]?.message?.content?.trim() || "I wasn't able to complete that request — try rephrasing your question.");
+  return { answer, groundedOn: groundedProjectsMentionedIn(answer, candidates) };
 }
 
 // ---------------------------------------------------------------------------

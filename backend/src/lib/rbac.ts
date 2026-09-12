@@ -51,7 +51,10 @@ export function computeFinancials(f: FinancialLike | null | undefined, totalExpe
   const revenue = Number(f.actualRevenue) > 0 ? Number(f.actualRevenue) : Number(f.estimatedRevenue);
   const supplierCost = Number(f.actualCost) > 0 ? Number(f.actualCost) : Number(f.estimatedCost);
   const totalCost = supplierCost + totalExpenses;
-  const margin = revenue > 0 ? ((revenue - totalCost) / revenue) * 100 : null;
+  // Margin is meaningless before a cost figure actually exists (fresh RFQs default
+  // to 0 cost) — showing e.g. "100% margin" for a deal nobody has costed out yet
+  // reads as wildly profitable rather than "not started". Suppress until sourced.
+  const margin = revenue > 0 && supplierCost > 0 ? ((revenue - totalCost) / revenue) * 100 : null;
   const customerBalance = revenue - Number(f.customerPaid);
   const supplierBalance = supplierCost - Number(f.supplierPaid);
 

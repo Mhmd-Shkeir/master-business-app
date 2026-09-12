@@ -187,6 +187,8 @@ const FINANCIAL_INPUT_FIELDS = [...REVENUE_FIELDS, ...COST_FIELDS] as const;
 const EXPENSE_CATEGORIES = ["Shipping", "Inspection", "Customs", "Storage", "Other"];
 
 function ExpensesSection({ project }: { project: ProjectDetail }) {
+  const { user } = useAuth();
+  const canEdit = user?.role === "ADMIN" || project.status !== "CLOSED";
   const addExpense = useAddExpense(project.id);
   const [showForm, setShowForm] = useState(false);
   const [category, setCategory] = useState("Shipping");
@@ -242,7 +244,7 @@ function ExpensesSection({ project }: { project: ProjectDetail }) {
         </div>
       )}
 
-      {!showForm && (
+      {!showForm && canEdit && (
         <button
           type="button"
           onClick={() => setShowForm(true)}
@@ -337,6 +339,9 @@ export function ProjectDetailPage() {
   const currentIndex = WORKFLOW_ORDER.indexOf(project.status);
   const isAdmin = user?.role === "ADMIN";
   const canEditSupplier = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
+  // Closed is a finalized record — Sales/Procurement lose edit access to it;
+  // Admin keeps it for exceptional corrections (backend enforces this too).
+  const canEditProject = isAdmin || project.status !== "CLOSED";
   const forwardStages = WORKFLOW_ORDER.slice(currentIndex + 1);
   const nextStage = forwardStages[0];
   const f = project.financial ?? {};
@@ -431,7 +436,7 @@ export function ProjectDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={project.status} />
-            {!editing && (
+            {!editing && canEditProject && (
               <button
                 type="button"
                 onClick={startEditing}
@@ -442,11 +447,11 @@ export function ProjectDetailPage() {
             )}
           </div>
         </div>
-      </header>
+        {!isAdmin && project.status === "CLOSED" && (
+          <p className="mt-3 text-xs text-neutral-400">Closed — only Admin can make further changes.</p>
+        )}
 
-      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Overview</h2>
-        <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-neutral-100 pt-4 text-sm sm:grid-cols-3">
           <div>
             <p className="text-neutral-400">Owner</p>
             <p className="text-neutral-800">{project.owner?.name ?? "—"}</p>
@@ -482,28 +487,35 @@ export function ProjectDetailPage() {
               </p>
             )}
           </div>
-          <div>
+        </div>
+      </header>
+
+      <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Project Overview</h2>
+          <div className="shrink-0 text-right text-sm">
             <p className="text-neutral-400">Last Update</p>
             <p className="text-neutral-800">{formatDate(project.lastUpdate)}</p>
           </div>
-          {editing && canEditSupplier && (
-            <div>
-              <p className="text-neutral-400">Supplier</p>
-              <select
-                value={form.supplierId}
-                onChange={(e) => setForm((s) => ({ ...s, supplierId: e.target.value }))}
-                className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
-              >
-                <option value="">None</option>
-                {suppliers?.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
+
+        {editing && canEditSupplier && (
+          <div className="mb-6 max-w-xs text-sm">
+            <p className="text-neutral-400">Supplier</p>
+            <select
+              value={form.supplierId}
+              onChange={(e) => setForm((s) => ({ ...s, supplierId: e.target.value }))}
+              className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+            >
+              <option value="">None</option>
+              {suppliers?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="mb-6">
           <p className="text-sm text-neutral-400">Description</p>
@@ -568,7 +580,7 @@ export function ProjectDetailPage() {
                   );
                 })}
               </div>
-              {!editing && f.customerBalance != null && f.customerBalance > 0 && paymentFor !== "customer" && (
+              {!editing && canEditProject && f.customerBalance != null && f.customerBalance > 0 && paymentFor !== "customer" && (
                 <button
                   type="button"
                   onClick={() => setPaymentFor("customer")}
@@ -618,7 +630,7 @@ export function ProjectDetailPage() {
                   <p className="text-neutral-800">{formatCurrency(f.totalCost, f.currency)}</p>
                 </div>
               )}
-              {!editing && f.supplierBalance != null && f.supplierBalance > 0 && paymentFor !== "supplier" && (
+              {!editing && canEditProject && f.supplierBalance != null && f.supplierBalance > 0 && paymentFor !== "supplier" && (
                 <button
                   type="button"
                   onClick={() => setPaymentFor("supplier")}
@@ -637,13 +649,19 @@ export function ProjectDetailPage() {
 
           {!editing && project.expenses !== undefined && <ExpensesSection project={project} />}
 
-          {f.marginPercent !== undefined && (
+          {"marginPercent" in f && (
             <div className="text-sm">
               <p className="text-neutral-400">Profit Margin</p>
-              <p className={(f.marginPercent ?? 0) < 20 ? "font-medium text-amber-600" : "text-neutral-800"}>
-                {formatPercent(f.marginPercent)}
-              </p>
-              <p className="mt-0.5 text-xs text-neutral-400">Includes recorded expenses.</p>
+              {f.marginPercent != null ? (
+                <>
+                  <p className={f.marginPercent < 20 ? "font-medium text-amber-600" : "text-neutral-800"}>
+                    {formatPercent(f.marginPercent)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-neutral-400">Includes recorded expenses.</p>
+                </>
+              ) : (
+                <p className="text-neutral-400">Not available until a cost is entered.</p>
+              )}
             </div>
           )}
         </div>
