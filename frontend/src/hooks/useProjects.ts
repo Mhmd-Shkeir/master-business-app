@@ -3,10 +3,11 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import type { AuthUser, Customer, ProjectDetail, ProjectStatus, ProjectSummary, Supplier } from "../lib/types";
 
-export function useProjects() {
+export function useProjects(options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ["projects"],
     queryFn: async () => (await api.get<ProjectSummary[]>("/projects")).data,
+    ...options,
   });
 }
 

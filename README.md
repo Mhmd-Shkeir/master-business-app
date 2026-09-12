@@ -65,6 +65,10 @@ Seeded by `npx prisma db seed`, password `password123` for all three:
 - **Natural language queries**: use the Ask AI page, the widget on the Projects page, or "Ask about this project" on a project's detail page — try "What needs my attention today?", "Which projects are overdue?", "What's the outstanding balance on this project?".
 - **Drafting + Human Approval**: on a project's page, click **Draft Follow-up Email** — the AI drafts a subject/body grounded in that project's real data. Nothing is sent or recorded until you review, optionally edit, and click **Edit and Confirm**, which logs it to the Activity Timeline. Clicking Discard records nothing.
 
+## Bonus: in-app overdue notifications
+
+A bell icon (sidebar header on desktop, top bar on mobile) shows a count of the current user's overdue projects and a dropdown listing them — click one to jump straight to its detail page. It's in-app only (no email), reuses the exact same overdue definition already used everywhere else (`DueDate < today AND status != CLOSED`, computed once in `lib/rbac.ts`) rather than a second one, and respects existing visibility — no new RBAC surface, since due dates aren't a restricted field for any role. No bonus items beyond this were implemented (see the evaluation report for the rest of the bonus list, deliberately left as future work).
+
 ## Documented assumptions
 
 Things the brief didn't spell out exactly, where a judgment call was made:

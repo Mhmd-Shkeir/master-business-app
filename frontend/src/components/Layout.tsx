@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { Avatar } from "./Avatar";
+import { NotificationBell } from "./NotificationBell";
 import {
   CloseIcon,
   CustomersIcon,
@@ -93,16 +94,17 @@ export function Layout({ children }: { children: ReactNode }) {
               <span className="block text-xs text-neutral-500">Management</span>
             </span>
           </Link>
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            aria-label="Collapse sidebar"
-            className={`hidden shrink-0 rounded-md p-1 text-neutral-500 hover:bg-white/5 hover:text-white md:block ${
-              collapsed ? "md:hidden" : ""
-            }`}
-          >
-            «
-          </button>
+          <div className="hidden shrink-0 items-center gap-1 md:flex">
+            <NotificationBell onNavigate={closeMobile} />
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              aria-label="Collapse sidebar"
+              className={collapsed ? "hidden" : ""}
+            >
+              <span className="block rounded-md p-1 text-neutral-500 hover:bg-white/5 hover:text-white">«</span>
+            </button>
+          </div>
           <button
             type="button"
             onClick={closeMobile}
@@ -185,21 +187,24 @@ export function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex h-screen min-w-0 flex-1 scroll-smooth flex-col overflow-y-auto">
-        <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
-            className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100"
-          >
-            <MenuIcon className="h-5 w-5" />
-          </button>
-          <span className="flex items-center gap-2">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-indigo-700 text-xs font-bold text-white">
-              M
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+              className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </button>
+            <span className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-indigo-700 text-xs font-bold text-white">
+                M
+              </span>
+              <span className="text-sm font-semibold text-neutral-900">Master Business</span>
             </span>
-            <span className="text-sm font-semibold text-neutral-900">Master Business</span>
-          </span>
+          </div>
+          <NotificationBell buttonClassName="text-neutral-500 hover:bg-neutral-100" />
         </div>
 
         <main className="min-w-0 flex-1">{children}</main>
