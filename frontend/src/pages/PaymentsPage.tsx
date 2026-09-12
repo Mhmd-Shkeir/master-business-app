@@ -22,6 +22,7 @@ function Section({
   balanceField: "customerBalance" | "supplierBalance";
   paidField: "customerPaid" | "supplierPaid";
 }) {
+  const { user } = useAuth();
   const [openFor, setOpenFor] = useState<string | null>(null);
   const outstanding = projects.filter((p) => (p.financial?.[balanceField] ?? 0) > 0);
   const totalByCurrency = groupByCurrency(projects, balanceField);
@@ -67,7 +68,7 @@ function Section({
                     {formatCurrency(p.financial?.[balanceField], p.financial?.currency)} outstanding
                   </p>
                 </div>
-                {openFor !== p.id && (
+                {openFor !== p.id && (user?.role === "ADMIN" || p.status !== "CLOSED") && (
                   <button
                     type="button"
                     onClick={() => setOpenFor(p.id)}
