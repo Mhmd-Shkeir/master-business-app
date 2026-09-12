@@ -122,7 +122,7 @@ const createProjectSchema = z.object({
   nextAction: z.string().optional(),
   dueDate: z.coerce.date().optional(),
   description: z.string().optional(),
-  estimatedRevenue: z.coerce.number().nonnegative().default(0),
+  estimatedRevenue: z.coerce.number().positive("Estimated revenue must be greater than 0"),
   currency: z.enum(["USD", "EUR", "LBP"]).default("USD"),
 }).strict();
 

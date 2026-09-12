@@ -249,6 +249,16 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
   if (patch.supplierId !== undefined && canSeeCost(user.role)) {
     anyPermittedFieldProvided = true;
     if (patch.supplierId !== project.supplierId) {
+      // First-time assignment (not a reassignment of an existing supplier) must come with
+      // a real cost — otherwise a supplier can sit "assigned" indefinitely with $0 cost,
+      // which reads as "free" rather than "not sourced yet."
+      if (patch.supplierId && !project.supplierId) {
+        const resultingEstCost = patch.estimatedCost ?? Number(project.financial?.estimatedCost ?? 0);
+        const resultingActCost = patch.actualCost ?? Number(project.financial?.actualCost ?? 0);
+        if (resultingEstCost <= 0 && resultingActCost <= 0) {
+          throw new AppError("Assigning a supplier requires an estimated (or actual) cost greater than 0", 400);
+        }
+      }
       changes.push(project.supplierId ? "Supplier reassigned." : "Supplier assigned.");
       projectData.supplierId = patch.supplierId;
     }

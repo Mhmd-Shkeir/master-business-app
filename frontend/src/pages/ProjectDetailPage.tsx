@@ -321,6 +321,22 @@ export function ProjectDetailPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [paymentFor, setPaymentFor] = useState<"customer" | "supplier" | null>(null);
+  const [assigningSupplier, setAssigningSupplier] = useState(false);
+  const [pendingSupplierId, setPendingSupplierId] = useState("");
+  const [pendingCost, setPendingCost] = useState("");
+
+  async function handleAssignSupplier() {
+    if (!pendingSupplierId || !(Number(pendingCost) > 0)) return;
+    setActionError(null);
+    try {
+      await updateProject.mutateAsync({ supplierId: pendingSupplierId, estimatedCost: Number(pendingCost) });
+      setAssigningSupplier(false);
+      setPendingSupplierId("");
+      setPendingCost("");
+    } catch (err) {
+      setActionError(extractError(err, "Failed to assign supplier"));
+    }
+  }
 
   if (isLoading) return <div className="p-6 text-sm text-neutral-400">Loading...</div>;
   if (error) {
@@ -600,6 +616,68 @@ export function ProjectDetailPage() {
           {"estimatedCost" in f && (
             <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-4">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-violet-700">Supplier / Cost</h2>
+              {!editing && canEditSupplier && canEditProject && (
+                <div className="mb-3 text-sm">
+                  <p className="text-neutral-400">Supplier</p>
+                  {project.supplier ? (
+                    <p className="text-neutral-800">{project.supplier.name}</p>
+                  ) : assigningSupplier ? (
+                    <div className="mt-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={pendingSupplierId}
+                          onChange={(e) => setPendingSupplierId(e.target.value)}
+                          className="rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Select a supplier...</option>
+                          {suppliers?.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          placeholder="Est. Cost"
+                          value={pendingCost}
+                          onChange={(e) => setPendingCost(e.target.value)}
+                          className="w-28 rounded-md border border-neutral-300 px-2 py-1 text-sm outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAssignSupplier}
+                          disabled={!pendingSupplierId || !(Number(pendingCost) > 0) || updateProject.isPending}
+                          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          {updateProject.isPending ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssigningSupplier(false);
+                            setPendingSupplierId("");
+                            setPendingCost("");
+                          }}
+                          className="rounded-md border border-neutral-300 px-3 py-1 text-xs text-neutral-600 hover:bg-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <p className="text-xs text-neutral-400">A cost greater than 0 is required to assign a supplier.</p>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAssigningSupplier(true)}
+                      className="mt-1 rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                    >
+                      + Assign Supplier
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                 {COST_FIELDS.map(({ key, label }) => {
                   const value = (f as Record<string, number | undefined>)[key];

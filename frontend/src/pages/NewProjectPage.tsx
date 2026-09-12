@@ -19,6 +19,10 @@ export function NewProjectPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!estimatedRevenue || Number(estimatedRevenue) <= 0) {
+      setError("Estimated revenue must be greater than 0 — it can't be left blank or zero.");
+      return;
+    }
     try {
       const created = await createProject.mutateAsync({
         projectName,
@@ -26,7 +30,7 @@ export function NewProjectPage() {
         nextAction: nextAction || undefined,
         dueDate: dueDate || undefined,
         description: description || undefined,
-        estimatedRevenue: estimatedRevenue ? Number(estimatedRevenue) : 0,
+        estimatedRevenue: Number(estimatedRevenue),
         currency,
       });
       navigate(`/projects/${(created as { id: string }).id}`);
@@ -87,8 +91,10 @@ export function NewProjectPage() {
             <div>
               <label className="mb-1 block text-sm text-neutral-600">Est. Revenue (rough ask)</label>
               <input
+                required
                 type="number"
-                min="0"
+                min="0.01"
+                step="0.01"
                 value={estimatedRevenue}
                 onChange={(e) => setEstimatedRevenue(e.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
