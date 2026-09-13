@@ -27,8 +27,29 @@ function extractError(err: unknown, fallback: string): string {
   return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
 }
 
-function DailyBriefCard() {
-  const dailyBrief = useDailyBrief();
+// Splits the brief into its bullet/sentence lines so the Dashboard card can show a
+// short preview while the drawer (DailyBriefDrawer) shows the same text in full —
+// no backend change, just two presentations of the one string the AI already returns.
+function briefLines(brief: string): string[] {
+  return brief
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+function formatGeneratedAt(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+const BRIEF_PREVIEW_LINES = 3;
+
+function DailyBriefCard({
+  dailyBrief,
+  onViewDetails,
+}: {
+  dailyBrief: ReturnType<typeof useDailyBrief>;
+  onViewDetails: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
 
   async function generate() {
@@ -39,6 +60,9 @@ function DailyBriefCard() {
       setError(extractError(err, "Couldn't generate a brief right now."));
     }
   }
+
+  const lines = dailyBrief.data ? briefLines(dailyBrief.data.brief) : [];
+  const preview = lines.slice(0, BRIEF_PREVIEW_LINES);
 
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 shadow-sm">
@@ -58,11 +82,140 @@ function DailyBriefCard() {
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {dailyBrief.data ? (
-        <p className="whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
+        <>
+          <div className="space-y-1">
+            {preview.map((line, i) => (
+              <p key={i} className="truncate text-sm text-neutral-700">
+                {line}
+              </p>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-[11px] text-neutral-400">Generated {formatGeneratedAt(dailyBrief.data.generatedAt)}</p>
+            <button
+              type="button"
+              onClick={onViewDetails}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              View details →
+            </button>
+          </div>
+        </>
       ) : (
         !error && <p className="text-sm text-neutral-400">Generate a summary of what needs attention today.</p>
       )}
     </div>
+  );
+}
+
+// Full Daily Brief text plus a structured breakdown built from data already on the
+// Dashboard (no new backend call) — "Overdue"/"Missing Next Action"/"Payment &
+// Supplier Risk" are the same needsAttention flags the summary card and the KPI
+// section already use; "Recommended Focus" is the AI's own generated text in full.
+function DailyBriefDrawer({
+  open,
+  onClose,
+  dailyBrief,
+  projects,
+}: {
+  open: boolean;
+  onClose: () => void;
+  dailyBrief: ReturnType<typeof useDailyBrief>;
+  projects: ProjectSummary[];
+}) {
+  const overdue = projects.filter((p) => p.needsAttention.overdue);
+  const missingNextAction = projects.filter((p) => p.needsAttention.missingNextAction);
+  const risk = projects.filter((p) => p.needsAttention.blockedShipment || p.needsAttention.lowMargin);
+
+  function ProjectRow({ project, note }: { project: ProjectSummary; note: string }) {
+    return (
+      <Link
+        to={`/projects/${project.id}`}
+        onClick={onClose}
+        className="block rounded-md px-2 py-1.5 hover:bg-neutral-50"
+      >
+        <p className="truncate text-sm font-medium text-neutral-900">{project.projectName}</p>
+        <p className="truncate text-xs text-neutral-400">{note}</p>
+      </Link>
+    );
+  }
+
+  function Section({ title, items }: { title: string; items: ReactNode }) {
+    return (
+      <div className="mb-5">
+        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+        {items}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />}
+      <div
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col bg-white shadow-2xl transition-transform duration-200 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 px-5 py-4">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+            <SparkleIcon className="h-4 w-4 text-indigo-600" />
+            Daily Brief
+          </h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700">
+            ✕
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <Section
+            title={`Overdue (${overdue.length})`}
+            items={
+              overdue.length === 0 ? (
+                <p className="text-sm text-neutral-400">Nothing overdue.</p>
+              ) : (
+                overdue.map((p) => <ProjectRow key={p.id} project={p} note={`Due ${formatDate(p.dueDate)}`} />)
+              )
+            }
+          />
+          <Section
+            title={`Missing Next Action (${missingNextAction.length})`}
+            items={
+              missingNextAction.length === 0 ? (
+                <p className="text-sm text-neutral-400">Every active project has a next action set.</p>
+              ) : (
+                missingNextAction.map((p) => <ProjectRow key={p.id} project={p} note={p.status} />)
+              )
+            }
+          />
+          <Section
+            title={`Payment / Supplier Risk (${risk.length})`}
+            items={
+              risk.length === 0 ? (
+                <p className="text-sm text-neutral-400">No payment or margin risk flagged.</p>
+              ) : (
+                risk.map((p) => (
+                  <ProjectRow
+                    key={p.id}
+                    project={p}
+                    note={[p.needsAttention.blockedShipment && "Shipment blocked", p.needsAttention.lowMargin && "Low margin (<20%)"].filter(Boolean).join(" · ")}
+                  />
+                ))
+              )
+            }
+          />
+          <Section
+            title="Recommended Focus"
+            items={
+              dailyBrief.data ? (
+                <p className="whitespace-pre-wrap text-sm text-neutral-700">{dailyBrief.data.brief}</p>
+              ) : (
+                <p className="text-sm text-neutral-400">Generate a Daily Brief on the Dashboard to see AI recommendations here.</p>
+              )
+            }
+          />
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -344,6 +497,8 @@ function CurrencyCard({
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: projects, isLoading, error, refetch } = useProjects();
+  const dailyBrief = useDailyBrief();
+  const [briefDrawerOpen, setBriefDrawerOpen] = useState(false);
 
   const active = projects ?? [];
   const activeRfqs = active.filter((p) => p.status === "RFQ").length;
@@ -451,9 +606,16 @@ export function DashboardPage() {
             missingNextActionCount={missingNextActionCount}
             holdCount={holdCount}
           />
-          <DailyBriefCard />
+          <DailyBriefCard dailyBrief={dailyBrief} onViewDetails={() => setBriefDrawerOpen(true)} />
         </div>
       )}
+
+      <DailyBriefDrawer
+        open={briefDrawerOpen}
+        onClose={() => setBriefDrawerOpen(false)}
+        dailyBrief={dailyBrief}
+        projects={active}
+      />
 
       <section id="overview" className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
