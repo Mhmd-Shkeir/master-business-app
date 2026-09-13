@@ -2,7 +2,7 @@
 
 An internal tool for managing the full lifecycle of a customer project — Request, Quotation, Order, Shipping, and Closing — with role-based permissions and a data-grounded AI assistant ("Ask My Business").
 
-See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each. See [`docs/daily-log`](docs/daily-log) for a day-by-day build log from day 1 through submission — what was built, what broke, and how it was found and fixed, written as the work happened rather than reconstructed after the fact.
+See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each. See [`docs/Total_Report.docx`](docs/Total_Report.docx) for the full chronological build story, day 1 through submission — every feature, every bug found and how it was caught, and the final verified state. See [`docs/daily-log`](docs/daily-log) for the underlying day-by-day log both reports are drawn from.
 
 ## Stack
 
@@ -45,7 +45,7 @@ Every dependency actually exercised by the app (not just present in `package.jso
 ```
 backend/    Express API + Prisma schema
 frontend/   React app
-docs/       Evaluation report + daily progress notes
+docs/       Evaluation report, total build report, and daily progress notes
 ```
 
 ## Prerequisites
