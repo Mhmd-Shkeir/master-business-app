@@ -45,6 +45,7 @@ model User {
 
   ownedProjects Project[] @relation("ProjectOwner")
   activities    Activity[]
+  dismissedOverdueNotifications NotificationDismissal[]
 }
 
 model Customer {
@@ -99,6 +100,7 @@ model Project {
   financial   Financial?
   expenses    Expense[]
   activities  Activity[]
+  overdueDismissals NotificationDismissal[]
 
   // Postgres doesn't auto-index foreign key columns (unlike MySQL) — these back
   // frequent lookups: dashboard/AI status filters, and per-customer/supplier/owner views.
@@ -154,5 +156,23 @@ model Activity {
   createdAt DateTime     @default(now())
 
   @@index([projectId])
+  @@index([userId])
+}
+
+// A user permanently dismissing an overdue-project notification by following its
+// link. Scoped to (userId, projectId), not the specific due date — if the project's
+// due date is later pushed out further, the user has already acknowledged it and
+// isn't re-notified just because time keeps passing. Deliberately its own tiny
+// table rather than a field on User/Project — this is per-viewer UI state, not a
+// business fact about the project.
+model NotificationDismissal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
   @@index([userId])
 }

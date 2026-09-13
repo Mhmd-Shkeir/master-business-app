@@ -2,7 +2,7 @@
 
 An internal tool for managing the full lifecycle of a customer project — Request, Quotation, Order, Shipping, and Closing — with role-based permissions and a data-grounded AI assistant ("Ask My Business").
 
-See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each.
+See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each. See [`docs/daily-log`](docs/daily-log) for a day-by-day build log from day 1 through submission — what was built, what broke, and how it was found and fixed, written as the work happened rather than reconstructed after the fact.
 
 ## Stack
 
@@ -11,6 +11,34 @@ See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical
 - Database: PostgreSQL on Supabase (Prisma ORM)
 - Auth: JWT + bcrypt
 - AI: OpenAI-compatible SDK (configurable base URL / model / key — used with Groq in development)
+
+## Frameworks and packages
+
+Every dependency actually exercised by the app (not just present in `package.json` from initial scaffolding):
+
+**Backend**
+- `express` + `express-async-errors` — HTTP layer; the latter forwards thrown/rejected errors from async route handlers to Express's error middleware instead of crashing the process.
+- `@prisma/client` / `prisma` — ORM and migrations against PostgreSQL.
+- `zod` — request-body validation on every mutating route (`.strict()` schemas reject unexpected fields rather than silently ignoring them).
+- `jsonwebtoken` + `bcryptjs` — JWT issuing/verification and password hashing.
+- `openai` — the official OpenAI SDK, pointed at Groq's OpenAI-compatible endpoint via `AI_BASE_URL` (works unmodified against real OpenAI or any other OpenAI-compatible provider by changing that one value). Used for both plain completions (Daily Brief, email drafting) and function-calling (natural-language queries against `list_projects`/`get_project_detail`).
+- `cors`, `dotenv` — cross-origin requests from the Vite dev server, environment loading.
+
+**Frontend**
+- `react` + `react-dom` (v19), `react-router-dom` (v7) — SPA routing.
+- `@tanstack/react-query` — server-state cache, mutation handling, and the invalidation strategy every mutation relies on to keep other views in sync (see "Real-time updates" below).
+- `axios` — HTTP client, with a request interceptor attaching the JWT and a response interceptor handling 401s.
+- `tailwindcss` v4 (`@tailwindcss/vite` plugin) — utility-first styling; every icon in the app is a small hand-rolled inline SVG (`components/icons.tsx`) rather than an icon library.
+- `vite` + `typescript` — dev server and build.
+
+## Design approach
+
+- **RBAC as the single source of truth, not a UI convention.** One function (`lib/rbac.ts`) computes financial visibility and attention flags; the REST API, the AI's tool results, and the AI's Daily Brief all call the same function rather than each re-implementing the rule. When a leak was found (Day 5's role-blind `needsAttention` flags), fixing it in one place fixed it everywhere with no additional per-surface changes — direct evidence the architecture holds up under a real bug, not just in theory.
+- **Attention-first, not KPIs-first.** The Dashboard's "Needs My Attention" section sits above the KPI row on the explicit reading that the brief's "most critical screen" language means surfacing problems before summary counts, not after.
+- **No fabricated data, ever.** Several requests were explicitly declined rather than faked to look more complete — a "Cancelled" project status that doesn't exist in the schema, a cross-project activity feed with no backing data source, a "vs. last month" trend indicator with no historical snapshots to compute it from. Each is logged in the daily log with the reasoning, not silently dropped.
+- **Business rules enforced server-side, reflected client-side.** Every constraint that matters (RBAC edit permissions, the Closed-project lock, revenue/cost-must-be-positive rules, the Shipment Hold) is checked in the backend first and verified there directly via API calls that bypass the UI — the frontend hiding a button is a UX courtesy, never the actual enforcement.
+- **Real measurement over eyeballing, especially for responsive layout.** Two genuine responsive bugs (Day 5, Day 6) were found only because real screenshots at specific window widths were pushed back on and re-verified with `scrollWidth`/`clientWidth` measurement rather than a handful of preset breakpoints assumed to be representative.
+- **Restraint over decoration.** No stock illustrations, no decorative animation, no icon library — plain color-coded status, a small hand-rolled icon set, and generous whitespace, matching how an enterprise B2B tool actually reads rather than a marketing landing page.
 
 ## Structure
 
@@ -96,7 +124,11 @@ Seeded by `npx prisma db seed`, password `password123` for all three:
 
 ## Bonus: in-app overdue notifications
 
-A bell icon (sidebar header on desktop, top bar on mobile) shows a count of the current user's overdue projects and a dropdown listing them — click one to jump straight to its detail page. It's in-app only (no email), reuses the exact same overdue definition already used everywhere else (`DueDate < today AND status != CLOSED`, computed once in `lib/rbac.ts`) rather than a second one, and respects existing visibility — no new RBAC surface, since due dates aren't a restricted field for any role. No bonus items beyond this were implemented (see the evaluation report for the rest of the bonus list, deliberately left as future work).
+A bell icon (sidebar header on desktop, top bar on mobile) shows a count of the current user's overdue projects and a dropdown listing them — click one to jump straight to its detail page. It's in-app only (no email), reuses the exact same overdue definition already used everywhere else (`DueDate < today AND status != CLOSED`, computed once in `lib/rbac.ts`) rather than a second one, and respects existing visibility — no new RBAC surface, since due dates aren't a restricted field for any role. The badge count polls every 60 seconds, since "overdue" changes purely with the clock and none of React Query's default refetch triggers (mount, focus, mutation) would otherwise catch a project silently crossing into overdue.
+
+Following a notification's link **permanently dismisses it for that exact account** — persisted server-side (a small `NotificationDismissal` table keyed on user + project), not just for the browser session, and scoped only to that specific link — reaching the same project any other way (the Projects list, Needs My Attention, Recent Projects) does not dismiss it, and the Needs My Attention section itself is never affected, since it must always reflect true business state regardless of who's acknowledged the bell.
+
+No bonus items beyond this were implemented (see the evaluation report for the rest of the bonus list, deliberately left as future work).
 
 ## Documented assumptions
 
@@ -108,6 +140,7 @@ Things the brief didn't spell out exactly, where a judgment call was made:
 - **Stage-transition business rules**: moving a project to **Quoted** (or skipping to/past it) requires an estimated or actual revenue greater than 0 — you can't quote a $0 deal. Moving to **Ordered** (or skipping to/past it) requires a supplier assigned *and* an estimated or actual cost greater than 0 — you can't place an order with no supplier or no cost. Both checks apply even to an Admin's skip-forward transitions, not just single-step moves, so business data can't be bypassed by skipping stages.
 - **Edit permission mirrors view permission**: a role can edit a financial figure exactly when it can see it (Sales owns the customer/revenue side, Procurement owns the supplier/cost side, Admin both) — this keeps one mental model for both visibility and edit rights instead of two separate rule sets.
 - **Customer/Supplier deletion is blocked** (409, not a crash) while any Project still references them, so a project record is never left pointing at a customer or supplier that no longer exists.
+- **Net Cash Flow** (Dashboard, Admin-only) is actual money received from customers minus actual money paid to suppliers, per currency — not requested by the brief, added as a genuinely different figure from Profit Margin, which is revenue-vs-cost on paper regardless of whether anyone has actually been paid.
 - **Currency is per-project** (USD/EUR/LBP), stored on the Financial record, visible and editable by every role regardless of the revenue/cost RBAC split (it's metadata about the amounts, not a sensitive amount itself). No FX conversion is performed anywhere — multi-currency totals are always shown per-currency, never combined.
 - **Payments Due on the Dashboard is grouped by currency**, not summed into one cross-currency number — summing different currencies together would be mathematically meaningless. With the seeded demo data (all USD) this renders as a single line; it only shows multiple lines once a non-USD project exists.
 - **Real-time updates**: every mutation invalidates the relevant React Query cache (including Customer/Supplier edits, which also invalidate the Projects cache since projects embed a slim customer/supplier snapshot), and React Query's default `refetchOnWindowFocus` covers cross-tab staleness — switching back to a tab re-syncs it automatically. No SSE/WebSocket layer was added; it wasn't needed to satisfy "no manual refresh required" for this app's actual usage pattern.

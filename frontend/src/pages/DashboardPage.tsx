@@ -273,6 +273,37 @@ const SUBTITLE: Record<string, string> = {
   PROCUREMENT: "Procurement Overview",
 };
 
+// Net Cash Flow needs both sides (money received from customers, money paid to
+// suppliers), so — like Profit Margin — it's Admin-only; Sales/Procurement each
+// see only their own half elsewhere (Payments Due / Payables Due). A standalone
+// horizontal bar rather than a 6th KPI card — cramming it into that grid left too
+// little width for the currency amounts, truncating them.
+function NetCashFlowBar({ amounts }: { amounts: Map<string, number> }) {
+  return (
+    <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <IconBadge icon={<DollarIcon className="h-4 w-4" />} tint="indigo" />
+        <div>
+          <p className="text-xs font-medium text-neutral-500">Net Cash Flow</p>
+          <p className="text-xs text-neutral-400">Received from customers − paid to suppliers</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+        {amounts.size === 0 ? (
+          <p className="text-xl font-semibold text-neutral-900 sm:text-2xl">—</p>
+        ) : (
+          [...amounts.entries()].map(([currency, total]) => (
+            <p key={currency} className={`text-xl font-semibold sm:text-2xl ${total < 0 ? "text-red-600" : "text-emerald-600"}`}>
+              {total >= 0 ? "+" : ""}
+              {formatCurrency(total, currency)}
+            </p>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CurrencyCard({
   label,
   amounts,
@@ -329,6 +360,17 @@ export function DashboardPage() {
   const paymentsDueProjectCount = active.filter((p) => (p.financial?.customerBalance ?? 0) > 0).length;
   const payablesDueProjectCount = active.filter((p) => (p.financial?.supplierBalance ?? 0) > 0).length;
 
+  // Net Cash Flow = actual money received from customers minus actual money paid to
+  // suppliers — distinct from Profit Margin, which is revenue-vs-cost on paper and
+  // doesn't care whether anyone has actually been paid yet.
+  const netCashFlowByCurrency = new Map<string, number>();
+  for (const [currency, amount] of groupByCurrency(active, "customerPaid")) {
+    netCashFlowByCurrency.set(currency, (netCashFlowByCurrency.get(currency) ?? 0) + amount);
+  }
+  for (const [currency, amount] of groupByCurrency(active, "supplierPaid")) {
+    netCashFlowByCurrency.set(currency, (netCashFlowByCurrency.get(currency) ?? 0) - amount);
+  }
+
   const attention = active.filter((p) => p.needsAttention.any);
   const overdueCount = active.filter((p) => p.needsAttention.overdue).length;
   const lowMarginCount = active.filter((p) => p.needsAttention.lowMargin).length;
@@ -338,7 +380,14 @@ export function DashboardPage() {
 
   const showPayments = user?.role === "ADMIN" || user?.role === "SALES";
   const showPayables = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
+  const showNetCashFlow = user?.role === "ADMIN";
   const kpiCardCount = 3 + (showPayments ? 1 : 0) + (showPayables ? 1 : 0);
+  // Auto-fit instead of fixed breakpoint column counts: a fixed lg:grid-cols-5 looks
+  // fine with short numbers but truncates as soon as a currency value grows past a
+  // few digits, since the actual available width (viewport minus the 256px sidebar)
+  // doesn't scale with the breakpoint name. Auto-fit reflows by real available width
+  // at any window size instead of us guessing one breakpoint that happens to work.
+  const kpiGridCols = "grid-cols-[repeat(auto-fit,minmax(180px,1fr))]";
 
   return (
     <div className="animate-fade-in w-full px-8 py-6">
@@ -409,7 +458,7 @@ export function DashboardPage() {
       <section id="overview" className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Business KPIs</h2>
         {isLoading ? (
-          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+          <div className={`grid gap-4 ${kpiGridCols}`}>
             {Array.from({ length: kpiCardCount }).map((_, i) => (
               <div key={i} className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
                 <Skeleton className="mb-2 h-3 w-20" />
@@ -418,7 +467,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${kpiCardCount === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+          <div className={`grid gap-4 ${kpiGridCols}`}>
             <div className="rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
                 <p className="text-xs font-medium text-neutral-500">Active RFQs</p>
@@ -476,6 +525,8 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+
+      {showNetCashFlow && !isLoading && <NetCashFlowBar amounts={netCashFlowByCurrency} />}
 
       <section id="attention">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">

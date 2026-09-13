@@ -3,7 +3,7 @@ import type { ProjectSummary } from "./types";
 /** Sums a role-visible balance/amount field grouped by currency. No FX conversion — mixing currencies into one number would be meaningless. */
 export function groupByCurrency(
   projects: ProjectSummary[],
-  field: "customerBalance" | "supplierBalance" | "actualRevenue" | "actualCost",
+  field: "customerBalance" | "supplierBalance" | "actualRevenue" | "actualCost" | "customerPaid" | "supplierPaid",
 ): Map<string, number> {
   const map = new Map<string, number>();
   for (const p of projects) {

@@ -1,0 +1,28 @@
+# Day 6 — 2026-09-13 (submission day)
+
+Final-day pass: one bonus feature (the only bonus item implemented, deliberately — the brief explicitly rewards a working core over a partially-done extended scope), a new Admin-only financial metric, and a second real responsive bug caught from the user's own screenshots at a window size my own testing hadn't covered.
+
+## Bonus: in-app overdue-project notifications
+
+A bell icon (sidebar on desktop, top bar on mobile) with a count badge and a dropdown listing the current user's overdue projects, each linking straight to its detail page. Reuses the exact `needsAttention().overdue` definition already used everywhere else — no second definition of "overdue," and no new RBAC surface, since due dates aren't a role-restricted field.
+
+Two real issues found during my own verification pass, not shipped on the first attempt:
+
+1. **Stale badge count.** "Overdue" is purely a function of the clock, not of any mutation — a project can silently cross into overdue with zero user action, which none of React Query's default refetch triggers (mount, window focus, cache invalidation) would ever catch. First live test showed the bell reporting "nothing overdue" while a direct API call proved a project genuinely was — a light 60-second poll (`refetchInterval`) fixed it; re-verified the next morning that a project which had crossed into overdue purely from time passing was picked up automatically, no reload needed.
+2. **Badge redundant with its own open panel** — per explicit feedback, the count badge now hides while its own dropdown is open, since the panel's own header already shows the count.
+
+**Follow-up feature, added per explicit request:** clicking an overdue notification's link now *permanently* dismisses that project for that exact account — not just for the session, and not client-side only. New `NotificationDismissal` table (`userId` + `projectId`, unique together) and two endpoints (`GET /api/notifications/dismissed-overdue`, `POST /api/notifications/dismiss-overdue`); the bell filters its list against this before rendering, with an optimistic client-side update so the badge drops the instant the link is clicked rather than waiting on a round trip. Deliberately scoped to only the notification-bell's own link — clicking into the same project from anywhere else in the app (Recent Projects, Needs My Attention, the Projects list) does not dismiss it, and dismissal never touches the Needs My Attention section itself, which must keep showing true business state regardless of who's "seen" the bell. Verified live across all three demo roles independently, plus caught and correctly attributed two dismissals made by the user's own testing in the same shared browser session — proof the per-account scoping actually holds between different real accounts, not just between my own test logins.
+
+## New Admin-only metric: Net Cash Flow
+
+Money actually received from customers minus money actually paid to suppliers, aggregated per currency (never combined across currencies, matching the app's existing no-FX-conversion rule) — a genuinely different number from Profit Margin, which is revenue-vs-cost on paper and doesn't care whether anyone has actually been paid. Gated Admin-only for the same reason Profit Margin is: it needs both the customer-paid and supplier-paid figures, each of which is otherwise split between Sales and Procurement's own halves (Payments Due / Payables Due).
+
+First shipped as a 6th card in the KPI grid; per explicit feedback that six cards looked cramped, pulled out into its own full-width horizontal bar between the KPI row and Needs My Attention instead — a cleaner fit and, incidentally, the fix for a truncation issue the cramped 6-card grid had introduced.
+
+## Real responsive bug #2, caught the same way as Day 5's
+
+The user's own screenshots (their real Chrome window, not the preview pane) showed "Payments Due"/"Payables Due" truncating to "$111,0…" in a 5-column KPI row at a window width my own desktop-preset testing hadn't hit — while making the window *narrower* made it wrap to 2 columns and display correctly. Root cause: a fixed `lg:grid-cols-5` breakpoint doesn't scale with actual available width (viewport minus the fixed 256px sidebar), so it looks fine with short numbers and truncates as soon as a currency value grows past a few digits — exactly the same class of bug as the Day 5 breakpoint-collision fix, just triggered by larger numbers this time instead of a narrower window. Fixed properly this time instead of picking another single breakpoint that could break again: switched the KPI grid to CSS Grid auto-fit (`grid-cols-[repeat(auto-fit,minmax(180px,1fr))]`), which reflows by real available width at any window size rather than guessing one breakpoint name that happens to work for today's numbers. Verified with live overflow measurement (`scrollWidth` vs `clientWidth`) at 1024/1100/1200/1440px — zero overflow at any of them, plus a visual check confirming cards wrap cleanly instead of cramming.
+
+## README and documentation
+
+Rewrote the "Downloading and running locally" section to include the actual `git clone` step (previously missing entirely) and a Prerequisites section naming Node version and where to get a free Postgres DB (Supabase) and AI API key (Groq), including that the app runs fine without the AI key configured (a clean 503, not a crash) — verified against the actual `aiConfigured` check in code rather than assumed. Added a dedicated frameworks/packages breakdown and a design-approach summary (see below in this same pass). Backfilled this daily log itself for Day 5 and today, since a large amount of work had accumulated without a written entry.

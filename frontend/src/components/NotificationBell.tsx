@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useDismissedOverdueProjectIds, useDismissOverdueNotification } from "../hooks/useNotifications";
 import { useProjects } from "../hooks/useProjects";
 import { formatDate } from "../lib/format";
 import { BellIcon } from "./icons";
@@ -16,13 +17,20 @@ export function NotificationBell({
   // triggers (mount, window focus, cache invalidation) would ever catch. A light poll is the
   // simplest fix that doesn't need a WebSocket or background worker.
   const { data: projects } = useProjects({ refetchInterval: 60_000 });
+  const { data: dismissedIds } = useDismissedOverdueProjectIds();
+  const dismissOverdue = useDismissOverdueNotification();
   const [open, setOpen] = useState(false);
 
-  const overdue = (projects ?? []).filter((p) => p.needsAttention.overdue);
+  const dismissed = new Set(dismissedIds ?? []);
+  const overdue = (projects ?? []).filter((p) => p.needsAttention.overdue && !dismissed.has(p.id));
 
-  function handleSelect() {
+  function handleSelect(projectId: string) {
     setOpen(false);
     onNavigate?.();
+    // Permanent, per-account dismissal — following the link means "I've seen this
+    // one," so it stops counting toward the badge/list from now on, everywhere
+    // this account signs in, not just for this browser session.
+    dismissOverdue.mutate(projectId);
   }
 
   return (
@@ -58,7 +66,7 @@ export function NotificationBell({
                   <Link
                     key={p.id}
                     to={`/projects/${p.id}`}
-                    onClick={handleSelect}
+                    onClick={() => handleSelect(p.id)}
                     className="block px-3 py-2 hover:bg-neutral-50"
                   >
                     <p className="truncate text-sm font-medium text-neutral-900">{p.projectName}</p>
