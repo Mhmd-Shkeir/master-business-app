@@ -79,22 +79,29 @@ export function LoginPage() {
         </form>
 
         <div className="mt-6 border-t border-neutral-100 pt-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Demo accounts</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Demo Accounts</p>
           <div className="space-y-1">
             {DEMO_ACCOUNTS.map((acc) => (
-              <button
-                key={acc.email}
-                type="button"
-                onClick={() => {
-                  setEmail(acc.email);
-                  setPassword("password123");
-                }}
-                className="block w-full rounded px-2 py-1 text-left text-sm text-neutral-600 hover:bg-neutral-50"
-              >
-                {acc.label} — {acc.email}
-              </button>
+              <div key={acc.email} className="flex items-center justify-between gap-2 rounded px-1.5 py-1">
+                <p className="truncate text-xs text-neutral-500">
+                  <span className="font-medium text-neutral-600">{acc.label}</span> — {acc.email}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail(acc.email);
+                    setPassword("password123");
+                  }}
+                  className="shrink-0 rounded border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50"
+                >
+                  Use {acc.label}
+                </button>
+              </div>
             ))}
           </div>
+          <p className="mt-2 px-1.5 text-[11px] text-neutral-400">
+            Demo password: <span className="font-mono">password123</span>
+          </p>
         </div>
       </div>
     </div>
