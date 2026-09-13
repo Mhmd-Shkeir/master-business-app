@@ -8,9 +8,16 @@ import { BellIcon } from "./icons";
 export function NotificationBell({
   onNavigate,
   buttonClassName = "text-neutral-400 hover:bg-white/5 hover:text-white",
+  align = "left",
 }: {
   onNavigate?: () => void;
   buttonClassName?: string;
+  // The dropdown anchors to whichever side has room to open without leaving the
+  // viewport: "left" (extends rightward) fits the desktop sidebar, where the bell
+  // sits near the left edge; "right" (extends leftward) fits the mobile top bar,
+  // where the bell sits at the far right — a fixed left-0 there pushed ~240px of
+  // a 288px-wide panel off the right edge of a 320px screen.
+  align?: "left" | "right";
 }) {
   // "Overdue" is purely a function of the clock, not of any mutation — a project can silently
   // cross into overdue with zero user action, which none of React Query's default refetch
@@ -52,7 +59,11 @@ export function NotificationBell({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-xl border border-neutral-200 bg-white shadow-lg">
+          <div
+            className={`absolute top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-white shadow-lg ${
+              align === "right" ? "right-0" : "left-0"
+            }`}
+          >
             <div className="border-b border-neutral-100 px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Overdue Projects {overdue.length > 0 && `(${overdue.length})`}

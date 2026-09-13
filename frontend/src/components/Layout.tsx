@@ -204,7 +204,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <span className="text-sm font-semibold text-neutral-900">Master Business</span>
             </span>
           </div>
-          <NotificationBell buttonClassName="text-neutral-500 hover:bg-neutral-100" />
+          <NotificationBell buttonClassName="text-neutral-500 hover:bg-neutral-100" align="right" />
         </div>
 
         <main className="min-w-0 flex-1">{children}</main>
