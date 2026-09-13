@@ -2,7 +2,7 @@
 
 An internal tool for managing the full lifecycle of a customer project — Request, Quotation, Order, Shipping, and Closing — with role-based permissions and a data-grounded AI assistant ("Ask My Business").
 
-See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each. See [`docs/Total_Report.docx`](docs/Total_Report.docx) for the full chronological build story, day 1 through submission — every feature, every bug found and how it was caught, and the final verified state. See [`docs/daily-log`](docs/daily-log) for the underlying day-by-day log both reports are drawn from. See [`docs/Demo_Workflow.md`](docs/Demo_Workflow.md) for the bulleted list demonstrating the core workflow and AI functionality (a demo video is also provided per the submission requirement).
+See [`docs/Evaluation_Report.docx`](docs/Evaluation_Report.docx) for a technical evaluation report mapped to the coding test's five grading criteria (Architecture, Data Integrity, AI Grounding, UX/UI, Code Quality), with concrete evidence — build/typecheck results, live-tested behavior, and real bugs found and fixed during QA — for each. See [`docs/Total_Report.docx`](docs/Total_Report.docx) for the full chronological build story, day 1 through submission — every feature, every bug found and how it was caught, and the final verified state. See [`docs/daily-log`](docs/daily-log) for the underlying day-by-day log both reports are drawn from. See [`docs/Demo_Workflow.md`](docs/Demo_Workflow.md) for the bulleted list demonstrating the core workflow and AI functionality, and see the [demo video](https://github.com/Mhmd-Shkeir/master-business-app/releases/download/demo-video/video_demo.mp4) for the same walkthrough recorded live, per the submission requirement.
 
 ## Stack
 
@@ -103,7 +103,7 @@ Seeded by `npx prisma db seed`, password `password123` for all three:
 
 ## Core workflow walkthrough
 
-See [`docs/Demo_Workflow.md`](docs/Demo_Workflow.md) for the same walkthrough as a literal step-by-step bulleted list (the brief's submission requirement); the summary below is the same content in narrative form.
+See [`docs/Demo_Workflow.md`](docs/Demo_Workflow.md) for the same walkthrough as a literal step-by-step bulleted list (the brief's submission requirement), or the [demo video](https://github.com/Mhmd-Shkeir/master-business-app/releases/download/demo-video/video_demo.mp4) for it recorded live; the summary below is the same content in narrative form.
 
 **Project lifecycle (RFQ → Quoted → Ordered → Shipping → Closed)**
 - Sign in as Admin. From the Dashboard, click **+ New Project** to create an RFQ for a customer with a real (> 0) estimated revenue, next action, and due date.
