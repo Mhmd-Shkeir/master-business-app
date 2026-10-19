@@ -60,8 +60,12 @@ export function Layout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const iconClass = "h-5 w-5";
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {
+      // Credentials were cleared locally even if remote revocation failed.
+    }
     navigate("/login");
   }
 
