@@ -10,17 +10,10 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useProjects } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate } from "../lib/format";
+import { csvCell } from "../lib/csv";
 import type { ProjectStatus, ProjectSummary } from "../lib/types";
 
 const STATUS_OPTIONS: (ProjectStatus | "ALL")[] = ["ALL", "RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
-
-function csvCell(value: string): string {
-  // Spreadsheet applications can treat CSV cells beginning with these
-  // characters as formulas. Explicitly make untrusted project/customer names
-  // plain text before RFC-style quote escaping.
-  const plainText = /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
-  return /[",\r\n]/.test(plainText) ? `"${plainText.replace(/"/g, '""')}"` : plainText;
-}
 
 function exportProjectsCsv(projects: ProjectSummary[]) {
   const header = ["Project", "Customer", "Status", "Owner", "Due Date", "Value", "Currency"];
