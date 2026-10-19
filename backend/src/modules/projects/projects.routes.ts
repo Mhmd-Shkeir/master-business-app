@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import {
   canSeeCost,
+  canSeeRevenue,
   computeFinancials,
   filterFinancialsForRole,
   needsAttention,
@@ -43,7 +44,7 @@ function serializeProject(
       : null,
     financial: filterFinancialsForRole(financials, role),
     needsAttention: needsAttention(project, financials, role),
-    shipmentHoldOverridden: project.shipmentHoldOverridden,
+    ...(canSeeRevenue(role) ? { shipmentHoldOverridden: project.shipmentHoldOverridden } : {}),
   };
 }
 
