@@ -41,6 +41,7 @@ model User {
   email        String     @unique
   passwordHash String
   role         Role
+  sessionVersion Int        @default(0)
   createdAt    DateTime   @default(now())
 
   ownedProjects Project[] @relation("ProjectOwner")
