@@ -416,6 +416,6 @@ export async function recordNote(projectId: string, message: string, user: AuthU
     });
 
     // Do not send Prisma's raw project, financials or expenses to the browser.
-    return { success: true, projectId };
+    return { success: true };
   });
 }
