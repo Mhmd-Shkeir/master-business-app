@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { usePrivateQueryScope } from "../lib/auth-context";
 import type { Role } from "../lib/types";
 
 export interface AppUser {
@@ -11,8 +12,9 @@ export interface AppUser {
 }
 
 export function useUsers() {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", ...scope],
     queryFn: async () => (await api.get<AppUser[]>("/users")).data,
   });
 }

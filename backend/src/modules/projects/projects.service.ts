@@ -31,6 +31,10 @@ export async function transitionProjectStatus(
   targetStatus: ProjectStatus,
   user: AuthUser,
 ) {
+  // Always authorize CLOSED before any balance-dependent decision or response.
+  if (targetStatus === "CLOSED" && !canSeeRevenue(user.role)) {
+    throw new AppError("Insufficient permissions", 403);
+  }
   return withSerializableTransaction(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: projectId },
@@ -87,11 +91,7 @@ export async function transitionProjectStatus(
       const financials = computeFinancials(project.financial);
       const balance = financials?.customerBalance ?? 0;
       if (balance > 0) {
-        // Procurement must not learn the customer's private balance through an error response.
-        const errorMessage = canSeeRevenue(user.role)
-          ? `Cannot close: outstanding customer balance of ${balance.toFixed(2)}. Admin must use the override action.`
-          : "Cannot close: an outstanding customer balance exists. Contact Admin.";
-        throw new AppError(errorMessage, 409);
+        throw new AppError(`Cannot close: outstanding customer balance of ${balance.toFixed(2)}. Admin must use the override action.`, 409);
       }
     }
 

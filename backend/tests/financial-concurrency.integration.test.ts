@@ -63,6 +63,13 @@ describe.skipIf(!enabled)("concurrent updates against PostgreSQL", () => {
     await prisma.$disconnect();
   });
 
+  it("uses the database foreign key to protect assigned suppliers", async () => {
+    await expect(prisma.supplier.delete({ where: { id: supplierId } }))
+      .rejects.toMatchObject({ code: "P2003" });
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+    expect(project.supplierId).toBe(supplierId);
+  });
+
   it("does not allow two concurrent payments to overpay the same balance", async () => {
     const results = await Promise.allSettled([
       recordPayment(projectId, "customer", 60, "First attempt", user),

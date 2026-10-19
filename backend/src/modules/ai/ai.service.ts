@@ -349,12 +349,16 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
   });
   const safeActivities = sanitizeActivitiesForRole(activities, user.role);
 
+  const customerFacing = user.role !== "PROCUREMENT";
   const context = {
     projectName: project.projectName,
     status: project.status,
-    customer: project.customer.name,
-    customerContact: project.customer.contactName,
+    ...(customerFacing ? {
+      customer: project.customer.name,
+      customerContact: project.customer.contactName,
+    } : {}),
     supplier: project.supplier?.name ?? null,
+    ...(!customerFacing ? { supplierContact: project.supplier?.contactName ?? null } : {}),
     nextAction: project.nextAction,
     dueDate: project.dueDate,
     financial: filterFinancialsForRole(financials, user.role),
@@ -369,7 +373,10 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
         role: "system",
         content: [
           baseSystemPrompt(user),
-          "Draft a short, professional follow-up email for the project described below, addressed to the customer contact (unless the context is clearly supplier-facing, e.g. sourcing/cost follow-up, in which case address the supplier). Use only the information given — do not invent figures or commitments. Keep the body under 150 words. Sign off as " +
+          (customerFacing
+            ? "Draft a customer-facing follow-up email using only authorized details. "
+            : "Draft a supplier-facing follow-up email. Do not include customer names or contacts. ") +
+          "Do not invent figures, names, or commitments. Keep the body under 150 words. Sign off as " +
             user.name +
             `. Respond with ONLY a JSON object of the exact shape {"subject": string, "body": string} and nothing else.`,
         ].join("\n\n"),

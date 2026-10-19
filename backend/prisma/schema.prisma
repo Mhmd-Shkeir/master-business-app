@@ -82,7 +82,7 @@ model Project {
   customer    Customer      @relation(fields: [customerId], references: [id])
 
   supplierId  String?
-  supplier    Supplier?     @relation(fields: [supplierId], references: [id])
+  supplier    Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
 
   ownerId     String
   owner       User          @relation("ProjectOwner", fields: [ownerId], references: [id])
