@@ -3,15 +3,17 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { authenticate, signToken } from "../../middleware/auth";
+import { loginRateLimit } from "../../middleware/login-rate-limit";
 
 export const authRouter = Router();
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-user-placeholder", 10);
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform((email) => email.toLowerCase()),
   password: z.string().min(1),
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", loginRateLimit, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
@@ -20,21 +22,29 @@ authRouter.post("/login", async (req, res) => {
   const { email, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user) {
+  // Perform a password hash comparison even for missing accounts to reduce
+  // observable response-time differences from user enumeration.
+  const passwordValid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (!user || !passwordValid) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const passwordValid = await bcrypt.compare(password, user.passwordHash);
-  if (!passwordValid) {
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-
-  const token = signToken({ id: user.id, role: user.role });
+  const token = signToken({ id: user.id, sessionVersion: user.sessionVersion });
 
   res.json({
     token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   });
+});
+
+
+// Incrementing sessionVersion invalidates this and all other issued tokens.
+authRouter.post("/logout", authenticate, async (req, res) => {
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { sessionVersion: { increment: 1 } },
+  });
+  res.status(204).end();
 });
 
 const changePasswordSchema = z.object({
@@ -59,9 +69,14 @@ authRouter.patch("/password", authenticate, async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
+    select: { id: true, sessionVersion: true },
+  });
 
-  res.json({ success: true });
+  // Invalidate all older sessions, but keep this browser signed in using a new JWT.
+  res.json({ success: true, token: signToken(updated) });
 });
 
 const updateProfileSchema = z.object({ name: z.string().min(1) }).strict();

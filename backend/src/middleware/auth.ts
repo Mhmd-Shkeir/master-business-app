@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../lib/env";
+import { prisma } from "../lib/prisma";
 
 export interface AuthUser {
   id: string;
@@ -15,7 +16,12 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+/**
+ * Revalidate the account on every request. The JWT identifies a session,
+ * but current permissions always come from the database, never a stale claim.
+ * Incrementing sessionVersion on password changes revokes all older tokens.
+ */
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
@@ -23,12 +29,35 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Missing bearer token" });
   }
 
+  let payload: jwt.JwtPayload | string;
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as AuthUser;
-    req.user = { id: payload.id, role: payload.role };
-    next();
+    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] });
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  if (
+    typeof payload === "string" ||
+    typeof payload.id !== "string" ||
+    !Number.isInteger(payload.sessionVersion) ||
+    payload.sessionVersion < 0
+  ) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  try {
+    const account = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, role: true, sessionVersion: true },
+    });
+    if (!account || account.sessionVersion !== payload.sessionVersion) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    req.user = { id: account.id, role: account.role };
+    return next();
+  } catch (err) {
+    return next(err);
   }
 }
 
@@ -44,6 +73,6 @@ export function requireRole(...roles: AuthUser["role"][]) {
   };
 }
 
-export function signToken(user: AuthUser): string {
-  return jwt.sign(user, env.JWT_SECRET, { expiresIn: "7d" });
+export function signToken(user: { id: string; sessionVersion: number }): string {
+  return jwt.sign(user, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" });
 }

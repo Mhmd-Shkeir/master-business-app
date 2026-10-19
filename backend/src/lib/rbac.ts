@@ -166,35 +166,25 @@ export function groupByCurrency<T>(
   return totals;
 }
 
-// Activity messages are NOT all system-generated from a fixed template set —
-// seed/demo data and free-text notes (e.g. a payment "note" field) can contain
-// arbitrary natural language. Word-boundary, case-insensitive pattern matching
-// (not exact-phrase matching) is used deliberately so a message like "Supplier
-// increased cost by 3% due to steel prices" is caught the same as the app's
-// own generated "Actual cost updated to X." — matching on the word "cost" or
-// "revenue" appearing anywhere, not just inside a known template shape.
-const MARGIN_PATTERN = /\b(margin|profit(?:ability)?)\b/i;
-const COST_SIDE_PATTERN =
-  /\b(cost|expense|supplier[\s-]?(paid|payment|invoice)|sourcing cost|procurement cost|purchase price)\b/i;
-const REVENUE_SIDE_PATTERN = /\b(revenue|customer[\s-]?(paid|payment|invoice)|sale price)\b/i;
-
 /**
- * Filters Activity messages for the AI's context (not the UI — the real
- * Activity Timeline stays project-level access, no per-field RBAC, since a
- * human reading it already has full project access). A message mentioning
- * margin/profit requires Admin; cost-side content requires canSeeCost;
- * revenue-side content requires canSeeRevenue. Anything that doesn't match
- * a recognized pattern is treated as neutral and kept — this is a targeted
- * filter for known-sensitive financial language, not a full redaction system.
+ * Free-text activities cannot safely be classified by searching for keywords.
+ * For restricted roles, show only exact known public system templates or the
+ * viewer's own comment; otherwise fail closed until sensitivity is structured.
  */
-export function sanitizeActivitiesForRole<T extends { message: string }>(
-  activities: T[],
-  role: AuthUser["role"],
+const SAFE_STATUS_EVENT = /^Status changed from (RFQ|QUOTED|ORDERED|SHIPPING|CLOSED) to (RFQ|QUOTED|ORDERED|SHIPPING|CLOSED)\.$/;
+const SAFE_SYSTEM_MESSAGES = new Set([
+  "Project created.", "Project created from RFQ.", "RFQ received from customer.",
+  "Project closed.", "Order confirmed with supplier.", "Shipment created.",
+]);
+
+export function sanitizeActivitiesForRole<T extends { message: string; type?: string | null; userId?: string | null }>(
+  activities: T[], role: AuthUser["role"], viewerId?: string,
 ): T[] {
-  return activities.filter((a) => {
-    if (MARGIN_PATTERN.test(a.message) && !canSeeMargin(role)) return false;
-    if (COST_SIDE_PATTERN.test(a.message) && !canSeeCost(role)) return false;
-    if (REVENUE_SIDE_PATTERN.test(a.message) && !canSeeRevenue(role)) return false;
-    return true;
+  if (role === "ADMIN") return activities;
+  return activities.filter((activity) => {
+    if (activity.type === "COMMENT" && viewerId && activity.userId === viewerId) return true;
+    if (activity.type === "SYSTEM") return SAFE_SYSTEM_MESSAGES.has(activity.message) || SAFE_STATUS_EVENT.test(activity.message);
+    if (activity.type === "UPDATE") return activity.message === "Description updated.";
+    return false;
   });
 }
