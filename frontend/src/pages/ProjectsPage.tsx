@@ -15,7 +15,11 @@ import type { ProjectStatus, ProjectSummary } from "../lib/types";
 const STATUS_OPTIONS: (ProjectStatus | "ALL")[] = ["ALL", "RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
 
 function csvCell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // Spreadsheet applications can treat CSV cells beginning with these
+  // characters as formulas. Explicitly make untrusted project/customer names
+  // plain text before RFC-style quote escaping.
+  const plainText = /^[\\s\\u0000-\\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
+  return /[",\\r\\n]/.test(plainText) ? `"${plainText.replace(/"/g, '""')}"` : plainText;
 }
 
 function exportProjectsCsv(projects: ProjectSummary[]) {
@@ -69,7 +73,11 @@ export function ProjectsPage() {
           <>
             <button
               type="button"
-              onClick={() => exportProjectsCsv(filtered)}
+              onClick={() => {
+                if (window.confirm("Export business data to a local CSV file? Keep the downloaded file secure.")) {
+                  exportProjectsCsv(filtered);
+                }
+              }}
               disabled={filtered.length === 0}
               className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
