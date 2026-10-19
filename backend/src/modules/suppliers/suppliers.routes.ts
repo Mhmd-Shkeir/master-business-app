@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { authenticate, requireRole } from "../../middleware/auth";
@@ -58,12 +59,17 @@ suppliersRouter.patch("/:id", requireRole("ADMIN", "PROCUREMENT"), async (req, r
 });
 
 suppliersRouter.delete("/:id", requireRole("ADMIN", "PROCUREMENT"), async (req, res) => {
-  const existing = await prisma.supplier.findUnique({ where: { id: req.params.id } });
-  if (!existing) return res.status(404).json({ error: "Supplier not found" });
-  const projectCount = await prisma.project.count({ where: { supplierId: req.params.id } });
-  if (projectCount > 0) {
-    return res.status(409).json({ error: `Cannot delete: ${projectCount} project(s) still reference this supplier` });
+  try {
+    // ON DELETE RESTRICT in PostgreSQL is the definitive concurrency guard.
+    await prisma.supplier.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2003" || err.code === "P2014") {
+        return res.status(409).json({ error: "Cannot delete a supplier assigned to a project" });
+      }
+      if (err.code === "P2025") return res.status(404).json({ error: "Supplier not found" });
+    }
+    throw err;
   }
-  await prisma.supplier.delete({ where: { id: req.params.id } });
-  res.status(204).send();
 });
