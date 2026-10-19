@@ -1,0 +1,40 @@
+name: SEQA Quality Checks
+
+on:
+  push:
+    branches:
+      - "seqa/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+      - name: Generate Prisma client
+        run: npm run prisma:generate --prefix backend
+        env:
+          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/seqa"
+          DIRECT_DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/seqa"
+      - name: Run backend regression tests
+        run: npm test --prefix backend
+      - name: Typecheck and build backend
+        run: npm run build --prefix backend
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+      - name: Typecheck and build frontend
+        run: npm run build --prefix frontend
