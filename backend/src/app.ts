@@ -1,5 +1,6 @@
 import "express-async-errors";
 import cors from "cors";
+import { Prisma } from "@prisma/client";
 import { env } from "./lib/env";
 import express, { NextFunction, Request, Response } from "express";
 import { prisma } from "./lib/prisma";
@@ -38,6 +39,9 @@ app.use("/api/notifications", notificationsRouter);
 // Catch-all error handler. express-async-errors forwards thrown/rejected
 // errors from async route handlers here instead of crashing the process.
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+    return res.status(409).json({ error: "Concurrent update in progress. Please retry." });
+  }
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
 });
