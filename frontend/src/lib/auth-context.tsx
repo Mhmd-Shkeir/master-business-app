@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { AuthUser } from "./types";
 import { api } from "./api";
 
@@ -29,10 +30,12 @@ function readStoredUser(): AuthUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem("token"));
   const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
 
   function login(newToken: string, newUser: AuthUser) {
+    queryClient.clear(); // Drop all previous account query AND mutation results.
     sessionStorage.setItem("token", newToken);
     sessionStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
@@ -40,27 +43,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function updateToken(newToken: string) {
+    queryClient.clear();
     sessionStorage.setItem("token", newToken);
     setToken(newToken);
   }
 
   async function logout() {
-    try {
-      await api.post("/auth/logout");
-    } finally {
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
-      setToken(null);
-      setUser(null);
+    const currentToken = sessionStorage.getItem("token");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    queryClient.clear(); // Clear private results immediately, before network latency.
+    setToken(null);
+    setUser(null);
+    if (currentToken) {
+      try {
+        await api.post("/auth/logout", {}, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      } catch {
+        // Locally signed out even if server-side revocation is unavailable.
+      }
     }
   }
 
   function updateUser(newUser: AuthUser) {
+    queryClient.clear(); // Role and permission changes must invalidate cached data.
     sessionStorage.setItem("user", JSON.stringify(newUser));
     setUser(newUser);
   }
 
   return <AuthContext.Provider value={{ user, token, login, updateToken, logout, updateUser }}>{children}</AuthContext.Provider>;
+}
+
+/** Scope all protected cached reads to account AND role. */
+export function usePrivateQueryScope() {
+  const { user } = useAuth();
+  return [user?.id ?? "anonymous", user?.role ?? "none"] as const;
 }
 
 export function useAuth() {
