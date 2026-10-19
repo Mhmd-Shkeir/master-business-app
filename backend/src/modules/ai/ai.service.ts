@@ -237,7 +237,7 @@ async function toolGetProjectDetail(args: Record<string, unknown>, user: AuthUse
     orderBy: { createdAt: "desc" },
     take: 5,
   });
-  const safeActivities = sanitizeActivitiesForRole(activities, user.role);
+  const safeActivities = sanitizeActivitiesForRole(activities, user.role, user.id);
 
   return {
     found: true,
@@ -406,5 +406,7 @@ export async function recordNote(projectId: string, message: string, user: AuthU
     data: { projectId, userId: user.id, type: "COMMENT", message: message.trim() },
   });
 
-  return prisma.project.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
+  // Never return a raw Prisma model: it contains financial and expense data.
+  // The caller should re-fetch through the role-filtered project endpoint.
+  return { success: true, projectId };
 }
