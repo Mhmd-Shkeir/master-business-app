@@ -25,7 +25,7 @@ aiRouter.post("/daily-brief", async (req, res) => {
   }
 });
 
-const querySchema = z.object({ question: z.string().min(1) }).strict();
+const querySchema = z.object({ question: z.string().trim().min(1).max(2000) }).strict();
 
 aiRouter.post("/query", async (req, res) => {
   const parsed = querySchema.safeParse(req.body);
@@ -40,7 +40,7 @@ aiRouter.post("/query", async (req, res) => {
   }
 });
 
-const draftSchema = z.object({ instructions: z.string().optional() }).strict();
+const draftSchema = z.object({ instructions: z.string().max(2000).optional() }).strict();
 
 aiRouter.post("/projects/:id/draft-email", async (req, res) => {
   const parsed = draftSchema.safeParse(req.body ?? {});
@@ -55,7 +55,7 @@ aiRouter.post("/projects/:id/draft-email", async (req, res) => {
   }
 });
 
-const confirmSchema = z.object({ message: z.string().min(1) }).strict();
+const confirmSchema = z.object({ message: z.string().trim().min(1).max(5000) }).strict();
 
 aiRouter.post("/projects/:id/confirm-note", async (req, res) => {
   const parsed = confirmSchema.safeParse(req.body);
