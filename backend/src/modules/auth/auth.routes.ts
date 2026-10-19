@@ -6,6 +6,7 @@ import { authenticate, signToken } from "../../middleware/auth";
 import { loginRateLimit } from "../../middleware/login-rate-limit";
 
 export const authRouter = Router();
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-user-placeholder", 10);
 
 const loginSchema = z.object({
   email: z.string().trim().email().transform((email) => email.toLowerCase()),
@@ -23,8 +24,7 @@ authRouter.post("/login", loginRateLimit, async (req, res) => {
 
   // Perform a password hash comparison even for missing accounts to reduce
   // observable response-time differences from user enumeration.
-  const dummyHash = bcrypt.hashSync("invalid-user-placeholder", 10);
-  const passwordValid = await bcrypt.compare(password, user?.passwordHash ?? dummyHash);
+  const passwordValid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
   if (!user || !passwordValid) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
