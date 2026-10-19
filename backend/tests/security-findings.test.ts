@@ -20,7 +20,7 @@ import { recordNote } from "../src/modules/ai/ai.service";
 import { sanitizeActivitiesForRole } from "../src/lib/rbac";
 
 describe("role-based data disclosure", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("does not return an unfiltered Prisma financial record after confirming a note", async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue({
