@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { aiConfigured, env } from "../../lib/env";
 import { prisma } from "../../lib/prisma";
+import { withSerializableTransaction } from "../../lib/transaction";
 import {
   canSeeCost,
   canSeeRevenue,
@@ -237,7 +238,7 @@ async function toolGetProjectDetail(args: Record<string, unknown>, user: AuthUse
     orderBy: { createdAt: "desc" },
     take: 5,
   });
-  const safeActivities = sanitizeActivitiesForRole(activities, user.role);
+  const safeActivities = sanitizeActivitiesForRole(activities, user.role, user.id);
 
   return {
     found: true,
@@ -398,13 +399,23 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
 // ---------------------------------------------------------------------------
 
 export async function recordNote(projectId: string, message: string, user: AuthUser) {
-  const project = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!project) throw new AppError("Project not found", 404);
   if (!message || !message.trim()) throw new AppError("Message cannot be empty", 400);
 
-  await prisma.activity.create({
-    data: { projectId, userId: user.id, type: "COMMENT", message: message.trim() },
-  });
+  return withSerializableTransaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, status: true },
+    });
+    if (!project) throw new AppError("Project not found", 404);
+    if (project.status === "CLOSED" && user.role !== "ADMIN") {
+      throw new AppError("Only Admin may add notes to a closed project", 403);
+    }
 
-  return prisma.project.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
+    await tx.activity.create({
+      data: { projectId, userId: user.id, type: "COMMENT", message: message.trim() },
+    });
+
+    // Do not send Prisma's raw project, financials or expenses to the browser.
+    return { success: true };
+  });
 }

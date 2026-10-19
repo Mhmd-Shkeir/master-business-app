@@ -16,7 +16,17 @@ export const app = express();
 
 const allowedOrigins = env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json());
+app.disable("etag");
+// Authenticated business data and AI responses should not be stored in
+// browser/proxy caches (nor indexed through accidental shared caches).
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, private, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
+app.use(express.json({ limit: "32kb" }));
 
 // Basic liveness + DB connectivity check.
 app.get("/api/health", async (_req, res) => {
