@@ -1,6 +1,7 @@
 import { ProjectStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { canSeeCost, canSeeRevenue, computeFinancials } from "../../lib/rbac";
+import { withSerializableTransaction } from "../../lib/transaction";
 import type { AuthUser } from "../../middleware/auth";
 
 export class AppError extends Error {
@@ -12,17 +13,6 @@ export class AppError extends Error {
 }
 
 const WORKFLOW_ORDER: ProjectStatus[] = ["RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
-
-async function getProjectWithFinancial(projectId: string) {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: { financial: true },
-  });
-  if (!project) {
-    throw new AppError("Project not found", 404);
-  }
-  return project;
-}
 
 /**
  * Normal status transition. Two independent rules:
@@ -37,66 +27,70 @@ export async function transitionProjectStatus(
   targetStatus: ProjectStatus,
   user: AuthUser,
 ) {
-  const project = await getProjectWithFinancial(projectId);
+  return withSerializableTransaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true },
+    });
+    if (!project) throw new AppError("Project not found", 404);
 
-  const currentIndex = WORKFLOW_ORDER.indexOf(project.status);
-  const targetIndex = WORKFLOW_ORDER.indexOf(targetStatus);
+    const currentIndex = WORKFLOW_ORDER.indexOf(project.status);
+    const targetIndex = WORKFLOW_ORDER.indexOf(targetStatus);
 
-  if (targetIndex === currentIndex) {
-    throw new AppError(`Project is already in ${targetStatus}`, 400);
-  }
-  if (targetIndex < currentIndex) {
-    throw new AppError("Backward status transitions are not allowed", 400);
-  }
-  if (user.role !== "ADMIN" && targetIndex !== currentIndex + 1) {
-    throw new AppError("Only Admin may skip workflow stages; move one stage at a time", 403);
-  }
+    if (targetIndex === currentIndex) {
+      throw new AppError(`Project is already in ${targetStatus}`, 400);
+    }
+    if (targetIndex < currentIndex) {
+      throw new AppError("Backward status transitions are not allowed", 400);
+    }
+    if (user.role !== "ADMIN" && targetIndex !== currentIndex + 1) {
+      throw new AppError("Only Admin may skip workflow stages; move one stage at a time", 403);
+    }
 
-  // Business-data completeness: every stage strictly between current and target must be
-  // satisfied, not just the immediate next one — otherwise an Admin skip could bypass these.
-  for (let i = currentIndex + 1; i <= targetIndex; i++) {
-    const stage = WORKFLOW_ORDER[i];
-    if (stage === "QUOTED") {
-      const revenue = Math.max(
-        Number(project.financial?.actualRevenue ?? 0),
-        Number(project.financial?.estimatedRevenue ?? 0),
-      );
-      if (revenue <= 0) {
-        throw new AppError(
-          `Cannot move to ${targetStatus}: a quote requires an estimated (or actual) revenue greater than 0`,
-          400,
+    // Validate every intervening stage against the same transaction snapshot.
+    for (let i = currentIndex + 1; i <= targetIndex; i++) {
+      const stage = WORKFLOW_ORDER[i];
+      if (stage === "QUOTED") {
+        const revenue = Math.max(
+          Number(project.financial?.actualRevenue ?? 0),
+          Number(project.financial?.estimatedRevenue ?? 0),
         );
+        if (revenue <= 0) {
+          throw new AppError(
+            `Cannot move to ${targetStatus}: a quote requires an estimated (or actual) revenue greater than 0`,
+            400,
+          );
+        }
       }
-    }
-    if (stage === "ORDERED") {
-      if (!project.supplierId) {
-        throw new AppError(`Cannot move to ${targetStatus}: an order requires a supplier to be assigned`, 400);
-      }
-      const cost = Math.max(
-        Number(project.financial?.actualCost ?? 0),
-        Number(project.financial?.estimatedCost ?? 0),
-      );
-      if (cost <= 0) {
-        throw new AppError(
-          `Cannot move to ${targetStatus}: an order requires an estimated (or actual) cost greater than 0`,
-          400,
+      if (stage === "ORDERED") {
+        if (!project.supplierId) {
+          throw new AppError(`Cannot move to ${targetStatus}: an order requires a supplier to be assigned`, 400);
+        }
+        const cost = Math.max(
+          Number(project.financial?.actualCost ?? 0),
+          Number(project.financial?.estimatedCost ?? 0),
         );
+        if (cost <= 0) {
+          throw new AppError(
+            `Cannot move to ${targetStatus}: an order requires an estimated (or actual) cost greater than 0`,
+            400,
+          );
+        }
       }
     }
-  }
 
-  if (targetStatus === "CLOSED") {
-    const financials = computeFinancials(project.financial);
-    const balance = financials?.customerBalance ?? 0;
-    if (balance > 0) {
-      throw new AppError(
-        `Cannot close: outstanding customer balance of ${balance.toFixed(2)}. Admin must use the override action.`,
-        409,
-      );
+    if (targetStatus === "CLOSED") {
+      const financials = computeFinancials(project.financial);
+      const balance = financials?.customerBalance ?? 0;
+      if (balance > 0) {
+        // Procurement must not learn the customer's private balance through an error response.
+        const errorMessage = canSeeRevenue(user.role)
+          ? `Cannot close: outstanding customer balance of ${balance.toFixed(2)}. Admin must use the override action.`
+          : "Cannot close: an outstanding customer balance exists. Contact Admin.";
+        throw new AppError(errorMessage, 409);
+      }
     }
-  }
 
-  const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.project.update({
       where: { id: projectId },
       data: { status: targetStatus },
@@ -111,8 +105,6 @@ export async function transitionProjectStatus(
     });
     return result;
   });
-
-  return updated;
 }
 
 /**
@@ -128,20 +120,23 @@ export async function overrideShipmentHold(projectId: string, user: AuthUser, re
     throw new AppError("A reason is required to override the shipment hold", 400);
   }
 
-  const project = await getProjectWithFinancial(projectId);
+  return withSerializableTransaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true },
+    });
+    if (!project) throw new AppError("Project not found", 404);
 
-  if (project.status !== "SHIPPING") {
-    throw new AppError("Shipment hold override only applies to projects in Shipping", 400);
-  }
-  const financials = computeFinancials(project.financial);
-  const balance = financials?.customerBalance ?? 0;
-  if (balance <= 0) {
-    throw new AppError("This project has no outstanding balance — no hold to override", 400);
-  }
+    if (project.status !== "SHIPPING") {
+      throw new AppError("Shipment hold override only applies to projects in Shipping", 400);
+    }
+    const financials = computeFinancials(project.financial);
+    const balance = financials?.customerBalance ?? 0;
+    if (balance <= 0) {
+      throw new AppError("This project has no outstanding balance — no hold to override", 400);
+    }
 
-  const admin = await prisma.user.findUnique({ where: { id: user.id } });
-
-  const updated = await prisma.$transaction(async (tx) => {
+    const admin = await tx.user.findUnique({ where: { id: user.id } });
     const result = await tx.project.update({
       where: { id: projectId },
       data: { status: "CLOSED", shipmentHoldOverridden: true },
@@ -156,8 +151,6 @@ export async function overrideShipmentHold(projectId: string, user: AuthUser, re
     });
     return result;
   });
-
-  return updated;
 }
 
 export interface ProjectUpdateInput {
@@ -207,7 +200,9 @@ function assertEditableStatus(project: { status: ProjectStatus }, user: AuthUser
  * Activity write — nothing to audit.
  */
 export async function updateProject(projectId: string, patch: ProjectUpdateInput, user: AuthUser) {
-  const project = await getProjectWithFinancial(projectId);
+  return withSerializableTransaction(async (tx) => {
+  const project = await tx.project.findUnique({ where: { id: projectId }, include: { financial: true } });
+  if (!project) throw new AppError("Project not found", 404);
   assertEditableStatus(project, user);
 
   const projectData: Record<string, unknown> = {};
@@ -298,13 +293,12 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
     throw new AppError("None of the submitted fields are editable by your role", 403);
   }
   if (changes.length === 0) {
-    return prisma.project.findUnique({
+    return tx.project.findUnique({
       where: { id: projectId },
       include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
     });
   }
 
-  await prisma.$transaction(async (tx) => {
     if (Object.keys(projectData).length > 0) {
       await tx.project.update({ where: { id: projectId }, data: projectData });
     }
@@ -314,11 +308,11 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
     await tx.activity.create({
       data: { projectId, userId: user.id, type: "UPDATE", message: changes.join(" ") },
     });
-  });
 
-  return prisma.project.findUnique({
+  return tx.project.findUnique({
     where: { id: projectId },
     include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
+  });
   });
 }
 
@@ -336,8 +330,8 @@ export async function recordPayment(
   note: string | undefined,
   user: AuthUser,
 ) {
-  if (!(amount > 0)) {
-    throw new AppError("Payment amount must be greater than 0", 400);
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(Math.round(amount * 100)) || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
+    throw new AppError("Payment must be a positive amount with at most two decimal places", 400);
   }
   if (side === "customer" && !canSeeRevenue(user.role)) {
     throw new AppError("Insufficient permissions", 403);
@@ -346,40 +340,46 @@ export async function recordPayment(
     throw new AppError("Insufficient permissions", 403);
   }
 
-  const project = await getProjectWithFinancial(projectId);
-  assertEditableStatus(project, user);
-  const financials = computeFinancials(project.financial);
-  const balance = side === "customer" ? (financials?.customerBalance ?? 0) : (financials?.supplierBalance ?? 0);
+  return withSerializableTransaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true },
+    });
+    if (!project) throw new AppError("Project not found", 404);
+    if (project.status === "CLOSED" && user.role !== "ADMIN") {
+      throw new AppError("This project is closed — only Admin can make further changes", 403);
+    }
+    if (!project.financial) {
+      throw new AppError("Project financial record is missing", 409);
+    }
 
-  if (amount > balance) {
-    throw new AppError(
-      `Payment of ${amount.toFixed(2)} exceeds the outstanding balance of ${balance.toFixed(2)}`,
-      400,
-    );
-  }
+    const financials = computeFinancials(project.financial);
+    const balance = side === "customer" ? financials!.customerBalance : financials!.supplierBalance;
+    if (amount > balance) {
+      throw new AppError(
+        `Payment of ${amount.toFixed(2)} exceeds the outstanding balance of ${balance.toFixed(2)}`,
+        400,
+      );
+    }
 
-  const currency = project.financial?.currency ?? "USD";
-  const field = side === "customer" ? "customerPaid" : "supplierPaid";
-  const currentPaid = Number(project.financial?.[field] ?? 0);
-
-  await prisma.$transaction(async (tx) => {
+    const field = side === "customer" ? "customerPaid" : "supplierPaid";
     await tx.financial.update({
       where: { projectId },
-      data: { [field]: currentPaid + amount },
+      data: { [field]: { increment: amount } },
     });
     await tx.activity.create({
       data: {
         projectId,
         userId: user.id,
         type: "UPDATE",
-        message: `${side === "customer" ? "Customer" : "Supplier"} payment of ${amount.toFixed(2)} ${currency} recorded.${note ? ` Note: ${note}` : ""}`,
+        message: `${side === "customer" ? "Customer" : "Supplier"} payment of ${amount.toFixed(2)} ${project.financial.currency} recorded.${note ? ` Note: ${note}` : ""}`,
       },
     });
-  });
 
-  return prisma.project.findUnique({
-    where: { id: projectId },
-    include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
+    return tx.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true, customer: true, supplier: true, owner: true, expenses: true },
+    });
   });
 }
 
@@ -401,25 +401,24 @@ export async function addExpense(
   if (!canSeeCost(user.role)) {
     throw new AppError("Insufficient permissions", 403);
   }
-  if (!(amount > 0)) {
-    throw new AppError("Expense amount must be greater than 0", 400);
+  if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
+    throw new AppError("Expense must be positive with at most two decimal places", 400);
   }
 
-  const project = await prisma.project.findUnique({ where: { id: projectId }, include: { financial: true } });
-  if (!project) {
-    throw new AppError("Project not found", 404);
-  }
-  assertEditableStatus(project, user);
-  const currency = project.financial?.currency ?? "USD";
-
-  await prisma.$transaction(async (tx) => {
+  return withSerializableTransaction(async (tx) => {
+    const project = await tx.project.findUnique({
+      where: { id: projectId },
+      include: { financial: true },
+    });
+    if (!project) throw new AppError("Project not found", 404);
+    assertEditableStatus(project, user);
     await tx.expense.create({ data: { projectId, category, amount, note } });
     await tx.activity.create({
       data: {
         projectId,
         userId: user.id,
         type: "UPDATE",
-        message: `Expense recorded: ${category} — ${amount.toFixed(2)} ${currency}.${note ? ` Note: ${note}` : ""}`,
+        message: `Expense recorded: ${category} — ${amount.toFixed(2)} ${project.financial?.currency ?? "USD"}.${note ? ` Note: ${note}` : ""}`,
       },
     });
   });
