@@ -1,50 +1,56 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { useAuth } from "../lib/auth-context";
+import { useAuth, usePrivateQueryScope } from "../lib/auth-context";
 import type { AuthUser, Customer, ProjectDetail, ProjectStatus, ProjectSummary, Supplier } from "../lib/types";
 
 export function useProjects(options?: { refetchInterval?: number }) {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", ...scope],
     queryFn: async () => (await api.get<ProjectSummary[]>("/projects")).data,
     ...options,
   });
 }
 
 export function useProject(id: string | undefined) {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["projects", id],
+    queryKey: ["projects", ...scope, id],
     queryFn: async () => (await api.get<ProjectDetail>(`/projects/${id}`)).data,
     enabled: Boolean(id),
   });
 }
 
 export function useCustomers() {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", ...scope],
     queryFn: async () => (await api.get<Customer[]>("/customers")).data,
   });
 }
 
 export function useSuppliers(enabled: boolean = true) {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["suppliers"],
+    queryKey: ["suppliers", ...scope],
     queryFn: async () => (await api.get<Supplier[]>("/suppliers")).data,
     enabled,
   });
 }
 
 export function useCustomer(id: string | undefined) {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["customers", id],
+    queryKey: ["customers", ...scope, id],
     queryFn: async () => (await api.get<Customer>(`/customers/${id}`)).data,
     enabled: Boolean(id),
   });
 }
 
 export function useSupplier(id: string | undefined) {
+  const scope = usePrivateQueryScope();
   return useQuery({
-    queryKey: ["suppliers", id],
+    queryKey: ["suppliers", ...scope, id],
     queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
     enabled: Boolean(id),
   });
