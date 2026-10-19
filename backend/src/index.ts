@@ -1,16 +1,31 @@
-import { app } from "./app";
-import { env } from "./lib/env";
+import express from "express";
 
-const port = Number(env.PORT);
+// Keep bootstrapping separate from application imports so startup
+// configuration failures return a controlled response instead of crashing
+// the serverless invocation. Never expose environment values or stack traces.
+const entry = express();
+entry.use(async (req, res, next) => {
+  try {
+    const { app } = await import("./app");
+    app(req, res, next);
+  } catch (err) {
+    console.error("Backend startup failed:", err);
+    const description = err instanceof Error ? err.message : "";
+    const category = description.includes("Invalid environment variables")
+      ? "ENV_CONFIGURATION"
+      : /prisma/i.test(description)
+        ? "DATABASE_CLIENT"
+        : /Cannot find module|ERR_MODULE_NOT_FOUND|Cannot resolve/.test(description)
+          ? "MODULE_RESOLUTION"
+          : "APPLICATION_STARTUP";
+    res.status(503).json({ status: "unavailable", error: "Backend startup failed", category });
+  }
+});
 
-// Vercel handles exported Express apps as serverless functions.
-// Keep the standalone listener for local development and non-Vercel hosts.
 if (!process.env.VERCEL) {
-  app.listen(port, () => {
-    console.log(`Backend listening on http://localhost:${port}`);
-  });
+  const port = Number(process.env.PORT || 4000);
+  entry.listen(port, () => console.log(`Backend listening on http://localhost:${port}`));
 }
 
-// This package uses CommonJS (NodeNext with type: commonjs).
-// Vercel expects module.exports for CommonJS Express functions.
-module.exports = app;
+// backend/package.json uses CommonJS.
+module.exports = entry;
