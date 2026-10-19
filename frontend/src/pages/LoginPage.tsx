@@ -78,6 +78,7 @@ export function LoginPage() {
           </button>
         </form>
 
+        {import.meta.env.DEV && (
         <div className="mt-6 border-t border-neutral-100 pt-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Demo Accounts</p>
           <div className="space-y-1">
@@ -103,6 +104,7 @@ export function LoginPage() {
             Demo password: <span className="font-mono">password123</span>
           </p>
         </div>
+        )}
       </div>
     </div>
   );

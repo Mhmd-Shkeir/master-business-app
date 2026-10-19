@@ -1,5 +1,6 @@
 import "express-async-errors";
 import cors from "cors";
+import { env } from "./lib/env";
 import express, { NextFunction, Request, Response } from "express";
 import { prisma } from "./lib/prisma";
 import { aiRouter } from "./modules/ai/ai.routes";
@@ -12,7 +13,8 @@ import { usersRouter } from "./modules/users/users.routes";
 
 export const app = express();
 
-app.use(cors());
+const allowedOrigins = env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Basic liveness + DB connectivity check.
@@ -20,8 +22,8 @@ app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", db: "connected" });
-  } catch (err) {
-    res.status(500).json({ status: "error", db: "unreachable", message: (err as Error).message });
+  } catch {
+    res.status(503).json({ status: "error", db: "unreachable" });
   }
 });
 

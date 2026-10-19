@@ -141,9 +141,11 @@ export function useAddExpense(projectId: string) {
 }
 
 export function useChangePassword() {
+  const { updateToken } = useAuth();
   return useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) =>
-      (await api.patch("/auth/password", data)).data,
+      (await api.patch<{ success: boolean; token: string }>("/auth/password", data)).data,
+    onSuccess: ({ token }) => updateToken(token),
   });
 }
 

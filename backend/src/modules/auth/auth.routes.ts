@@ -29,7 +29,7 @@ authRouter.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const token = signToken({ id: user.id, role: user.role });
+  const token = signToken({ id: user.id, sessionVersion: user.sessionVersion });
 
   res.json({
     token,
@@ -59,9 +59,14 @@ authRouter.patch("/password", authenticate, async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
+    select: { id: true, sessionVersion: true },
+  });
 
-  res.json({ success: true });
+  // Invalidate all older sessions, but keep this browser signed in using a new JWT.
+  res.json({ success: true, token: signToken(updated) });
 });
 
 const updateProfileSchema = z.object({ name: z.string().min(1) }).strict();
