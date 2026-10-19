@@ -13,6 +13,24 @@ jobs:
   build-and-unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/seqa"
+      DIRECT_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/seqa"
+      JWT_SECRET: "github-actions-only-test-secret-not-for-deployment"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: seqa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d seqa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js 22
@@ -27,11 +45,13 @@ jobs:
         run: npm ci --prefix backend
       - name: Generate Prisma client
         run: npm run prisma:generate --prefix backend
-        env:
-          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/seqa"
-          DIRECT_DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/seqa"
-      - name: Run backend regression tests
+      - name: Apply migrations to disposable PostgreSQL
+        working-directory: backend
+        run: npx prisma migrate deploy
+      - name: Run backend regression and concurrency tests
         run: npm test --prefix backend
+        env:
+          RUN_DB_INTEGRATION_TESTS: "1"
       - name: Typecheck and build backend
         run: npm run build --prefix backend
       - name: Install frontend dependencies
