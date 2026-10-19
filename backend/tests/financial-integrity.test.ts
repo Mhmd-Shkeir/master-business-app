@@ -91,9 +91,19 @@ describe("financial and status transaction behavior", () => {
     }));
     await expect(transitionProjectStatus("project-1", "CLOSED", procurement))
       .rejects.toMatchObject({
-        statusCode: 409,
-        message: "Cannot close: an outstanding customer balance exists. Contact Admin.",
+        statusCode: 403,
+        message: "Insufficient permissions",
       });
+    expect(mocks.tx.project.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects Procurement closure before reading any customer balance", async () => {
+    mocks.tx.project.findUnique.mockResolvedValue(sampleProject({
+      financial: { ...sampleProject().financial, customerPaid: 100 },
+    }));
+    await expect(transitionProjectStatus("project-1", "CLOSED", procurement))
+      .rejects.toMatchObject({ statusCode: 403, message: "Insufficient permissions" });
+    expect(mocks.tx.project.findUnique).not.toHaveBeenCalled();
     expect(mocks.tx.project.update).not.toHaveBeenCalled();
   });
 
