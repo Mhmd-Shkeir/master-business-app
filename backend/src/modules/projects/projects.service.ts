@@ -309,9 +309,9 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
     if (Object.keys(financialData).length > 0) {
       await tx.financial.update({ where: { projectId }, data: financialData });
     }
-      await tx.activity.create({
-        data: { projectId, userId: user.id, type: "UPDATE", message: changes.join(" ") },
-      });
+    await tx.activity.create({
+      data: { projectId, userId: user.id, type: "UPDATE", message: changes.join(" ") },
+    });
 
     return tx.project.findUnique({
       where: { id: projectId },
