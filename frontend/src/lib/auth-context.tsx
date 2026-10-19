@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { AuthUser } from "./types";
+import { api } from "./api";
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   login: (token: string, user: AuthUser) => void;
   updateToken: (token: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (user: AuthUser) => void;
 }
 
@@ -43,11 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(newToken);
   }
 
-  function logout() {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      setToken(null);
+      setUser(null);
+    }
   }
 
   function updateUser(newUser: AuthUser) {
