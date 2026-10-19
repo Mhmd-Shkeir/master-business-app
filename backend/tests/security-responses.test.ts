@@ -20,6 +20,9 @@ vi.mock("../src/lib/env", () => ({
   aiConfigured: false,
 }));
 vi.mock("../src/lib/prisma", () => ({ prisma: mocks }));
+vi.mock("../src/lib/transaction", () => ({
+  withSerializableTransaction: vi.fn((operation: (tx: unknown) => Promise<unknown>) => operation(mocks)),
+}));
 
 import { app } from "../src/app";
 import { signToken } from "../src/middleware/auth";
