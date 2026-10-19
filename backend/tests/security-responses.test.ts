@@ -59,7 +59,7 @@ const jwt = signToken({ id: "u1", sessionVersion: 0 });
 
 describe("role-based response security", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     mocks.user.findUnique.mockResolvedValue({ id: "u1", role: "SALES", sessionVersion: 0 });
     mocks.project.findUnique.mockResolvedValue(sensitiveProject);
     mocks.activity.create.mockResolvedValue({ id: "a1" });
