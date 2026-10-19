@@ -12,9 +12,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Clear persistent legacy credentials; new access tokens live only for this tab session.
+try {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+} catch { /* Local storage may be disabled. */ }
+
 function readStoredUser(): AuthUser | null {
   try {
-    const raw = localStorage.getItem("user");
+    const raw = sessionStorage.getItem("user");
     return raw ? (JSON.parse(raw) as AuthUser) : null;
   } catch {
     return null;
@@ -22,30 +28,30 @@ function readStoredUser(): AuthUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem("token"));
   const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
 
   function login(newToken: string, newUser: AuthUser) {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
+    sessionStorage.setItem("token", newToken);
+    sessionStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   }
 
   function updateToken(newToken: string) {
-    localStorage.setItem("token", newToken);
+    sessionStorage.setItem("token", newToken);
     setToken(newToken);
   }
 
   function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
 
   function updateUser(newUser: AuthUser) {
-    localStorage.setItem("user", JSON.stringify(newUser));
+    sessionStorage.setItem("user", JSON.stringify(newUser));
     setUser(newUser);
   }
 
