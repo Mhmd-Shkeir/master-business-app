@@ -74,5 +74,5 @@ export function requireRole(...roles: AuthUser["role"][]) {
 }
 
 export function signToken(user: { id: string; sessionVersion: number }): string {
-  return jwt.sign(user, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "7d" });
+  return jwt.sign(user, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" });
 }
