@@ -61,8 +61,8 @@ aiRouter.post("/projects/:id/confirm-note", async (req, res) => {
   const parsed = confirmSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   try {
-    const updated = await recordNote(req.params.id, parsed.data.message, req.user!);
-    res.json(updated);
+    await recordNote(req.params.id, parsed.data.message, req.user!);
+    res.status(201).json({ success: true });
   } catch (err) {
     if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
     throw err;
