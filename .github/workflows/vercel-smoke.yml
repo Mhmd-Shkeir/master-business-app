@@ -1,0 +1,34 @@
+name: Vercel deployment smoke test
+
+on:
+  push:
+    branches:
+      - "seqa/vercel-deployment"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check frontend production domain
+        run: |
+          set -euo pipefail
+          curl -sSL --max-time 25 -D /tmp/frontend-headers -o /tmp/frontend-body https://master-business-frontend.vercel.app/
+          cat /tmp/frontend-headers
+          echo "Body begins:"
+          head -c 250 /tmp/frontend-body
+          echo
+          grep -q '<div id="root"' /tmp/frontend-body
+      - name: Check backend and PostgreSQL health
+        run: |
+          set -euo pipefail
+          curl -sSL --max-time 25 -D /tmp/api-headers -o /tmp/api-body https://master-business-app-gilt.vercel.app/api/health
+          cat /tmp/api-headers
+          echo "API health payload:"
+          cat /tmp/api-body
+          grep -q '"status":"ok"' /tmp/api-body
+          grep -q '"db":"connected"' /tmp/api-body
