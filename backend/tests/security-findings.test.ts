@@ -36,7 +36,7 @@ describe("role-based data disclosure", () => {
       "Followed up with customer",
       { id: "sales-1", role: "SALES" },
     );
-    expect(response).toEqual({ success: true, projectId: "project-1" });
+    expect(response).toEqual({ success: true });
     expect(JSON.stringify(response)).not.toContain("123456");
     expect(JSON.stringify(response)).not.toContain("789456");
     expect(JSON.stringify(response)).not.toContain("987654");
