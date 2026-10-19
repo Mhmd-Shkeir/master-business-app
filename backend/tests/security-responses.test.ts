@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { Prisma } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   project: { findUnique: vi.fn() },
   activity: { create: vi.fn(), findMany: vi.fn() },
   notificationDismissal: { findMany: vi.fn() },
+  supplier: { delete: vi.fn() },
 }));
 
 vi.mock("../src/lib/env", () => ({
@@ -39,7 +41,7 @@ const sensitiveProject = {
   description: null,
   lastUpdate: new Date("2026-10-01T12:00:00Z"),
   createdAt: new Date("2026-10-01T12:00:00Z"),
-  shipmentHoldOverridden: false,
+  shipmentHoldOverridden: true,
   financial: {
     estimatedRevenue: 100_000,
     actualRevenue: 100_000,
@@ -78,6 +80,18 @@ describe("role-based response security", () => {
     expect(mocks.activity.create).toHaveBeenCalledOnce();
   });
 
+  it("returns 409 instead of deleting an assigned supplier", async () => {
+    mocks.user.findUnique.mockResolvedValue({ id: "u1", role: "PROCUREMENT", sessionVersion: 0 });
+    mocks.supplier.delete.mockRejectedValue(new Prisma.PrismaClientKnownRequestError(
+      "Foreign key violation", { code: "P2003", clientVersion: "6.16.3" },
+    ));
+    const response = await request(app)
+      .delete("/api/suppliers/s1")
+      .set("Authorization", `Bearer ${jwt}`);
+    expect(response.status).toBe(409);
+    expect(response.body.error).toContain("Cannot delete a supplier");
+  });
+
   it("rejects unauthenticated attempts to add notes", async () => {
     const response = await request(app)
       .post("/api/ai/projects/p1/confirm-note")
@@ -96,6 +110,7 @@ describe("role-based response security", () => {
     expect(response.body.financial).not.toHaveProperty("actualCost");
     expect(response.body.financial).not.toHaveProperty("marginPercent");
     expect(response.body).not.toHaveProperty("expenses");
+    expect(response.body.shipmentHoldOverridden).toBe(true);
   });
 
   it("does not disclose revenue fields to Procurement", async () => {
@@ -107,5 +122,6 @@ describe("role-based response security", () => {
     expect(response.body.financial).not.toHaveProperty("estimatedRevenue");
     expect(response.body.financial).not.toHaveProperty("customerBalance");
     expect(response.body.financial).toHaveProperty("actualCost");
+    expect(response.body).not.toHaveProperty("shipmentHoldOverridden");
   });
 });
