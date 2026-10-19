@@ -11,4 +11,6 @@ if (!process.env.VERCEL) {
   });
 }
 
-export default app;
+// This package uses CommonJS (NodeNext with type: commonjs).
+// Vercel expects module.exports for CommonJS Express functions.
+module.exports = app;
