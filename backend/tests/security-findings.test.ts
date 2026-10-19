@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/lib/prisma", () => ({
-  prisma: {
-    project: { findUnique: vi.fn() },
-    activity: { create: vi.fn() },
-  },
+const prismaMock = vi.hoisted(() => ({
+  project: { findUnique: vi.fn() },
+  activity: { create: vi.fn() },
 }));
+vi.mock("../src/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("../src/lib/transaction", () => ({
+  withSerializableTransaction: vi.fn((operation: (tx: unknown) => Promise<unknown>) =>
+    operation({ project: prismaMock.project, activity: prismaMock.activity })),
+}));
+
 vi.mock("../src/lib/env", () => ({
   env: { AI_BASE_URL: undefined, AI_MODEL_ID: undefined, AI_API_KEY: undefined },
   aiConfigured: false,
@@ -21,6 +25,7 @@ describe("role-based data disclosure", () => {
   it("does not return an unfiltered Prisma financial record after confirming a note", async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue({
       id: "project-1",
+      status: "RFQ",
       financial: { actualCost: 123456, actualRevenue: 789456 },
       expenses: [{ amount: 987654 }],
     } as never);
