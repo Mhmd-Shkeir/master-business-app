@@ -3,7 +3,7 @@ import { csvCell } from "../../frontend/src/lib/csv";
 
 describe("CSV injection prevention", () => {
   it("prefixes formula characters instead of allowing spreadsheet evaluation", () => {
-    expect(csvCell("=SUM(1,2)")).toBe("'=SUM(1,2)");
+    expect(csvCell("=SUM(1,2)")).toBe('"\'=SUM(1,2)"');
     expect(csvCell("+cmd")).toBe("'+cmd");
     expect(csvCell("-10+42")).toBe("'-10+42");
     expect(csvCell("@HYPERLINK(A1)")).toBe("'@HYPERLINK(A1)");
