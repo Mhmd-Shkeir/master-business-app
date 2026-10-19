@@ -6,7 +6,7 @@ import express from "express";
 const entry = express();
 entry.use(async (req, res, next) => {
   try {
-    const { app } = await import("./app");
+    const { app } = await import("./app.js");
     app(req, res, next);
   } catch (err) {
     console.error("Backend startup failed:", err);
