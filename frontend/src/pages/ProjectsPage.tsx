@@ -10,13 +10,10 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useProjects } from "../hooks/useProjects";
 import { useAuth } from "../lib/auth-context";
 import { formatCurrency, formatDate } from "../lib/format";
+import { csvCell } from "../lib/csv";
 import type { ProjectStatus, ProjectSummary } from "../lib/types";
 
 const STATUS_OPTIONS: (ProjectStatus | "ALL")[] = ["ALL", "RFQ", "QUOTED", "ORDERED", "SHIPPING", "CLOSED"];
-
-function csvCell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
 
 function exportProjectsCsv(projects: ProjectSummary[]) {
   const header = ["Project", "Customer", "Status", "Owner", "Due Date", "Value", "Currency"];
@@ -69,7 +66,11 @@ export function ProjectsPage() {
           <>
             <button
               type="button"
-              onClick={() => exportProjectsCsv(filtered)}
+              onClick={() => {
+                if (window.confirm("Export business data to a local CSV file? Keep the downloaded file secure.")) {
+                  exportProjectsCsv(filtered);
+                }
+              }}
               disabled={filtered.length === 0}
               className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >

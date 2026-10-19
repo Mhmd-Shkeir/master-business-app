@@ -84,7 +84,7 @@ projectsRouter.get("/:id", async (req, res) => {
   // states a real dollar figure in plain text. Sanitized the same way the AI
   // context already is, so a role that can't see cost/revenue/margin can't
   // read it here either.
-  const visibleActivities = sanitizeActivitiesForRole(activities, req.user!.role);
+  const visibleActivities = sanitizeActivitiesForRole(activities, req.user!.role, req.user!.id);
 
   // Expenses are cost-side data (shipping, inspection, etc.) — same visibility
   // rule as Supplier/Cost. The key is genuinely absent from the response for a

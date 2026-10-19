@@ -13,6 +13,9 @@ function daysFromNow(days: number): Date {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Demo seed with public credentials must never run in production");
+  }
   console.log("Seeding demo data...");
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);

@@ -1,19 +1,27 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { AuthUser } from "./types";
+import { api } from "./api";
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   login: (token: string, user: AuthUser) => void;
-  logout: () => void;
+  updateToken: (token: string) => void;
+  logout: () => Promise<void>;
   updateUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Clear persistent legacy credentials; new access tokens live only for this tab session.
+try {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+} catch { /* Local storage may be disabled. */ }
+
 function readStoredUser(): AuthUser | null {
   try {
-    const raw = localStorage.getItem("user");
+    const raw = sessionStorage.getItem("user");
     return raw ? (JSON.parse(raw) as AuthUser) : null;
   } catch {
     return null;
@@ -21,29 +29,38 @@ function readStoredUser(): AuthUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem("token"));
   const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
 
   function login(newToken: string, newUser: AuthUser) {
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
+    sessionStorage.setItem("token", newToken);
+    sessionStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   }
 
-  function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
+  function updateToken(newToken: string) {
+    sessionStorage.setItem("token", newToken);
+    setToken(newToken);
+  }
+
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      setToken(null);
+      setUser(null);
+    }
   }
 
   function updateUser(newUser: AuthUser) {
-    localStorage.setItem("user", JSON.stringify(newUser));
+    sessionStorage.setItem("user", JSON.stringify(newUser));
     setUser(newUser);
   }
 
-  return <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, token, login, updateToken, logout, updateUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

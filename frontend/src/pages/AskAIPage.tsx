@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { SendIcon, SparkleIcon, TrashIcon } from "../components/icons";
 import { PageHeader } from "../components/PageHeader";
 import { useAIQuery, type GroundedProject } from "../hooks/useAI";
-import { useAuth } from "../lib/auth-context";
 
 interface Turn {
   question: string;
@@ -15,26 +14,6 @@ function extractError(err: unknown, fallback: string): string {
   return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
 }
 
-function storageKey(userId: string | undefined): string {
-  return `ai-chat-${userId ?? "anon"}`;
-}
-
-function readStoredTurns(userId: string | undefined): Turn[] {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Turn[];
-    // Defensive: chats saved before groundedOn became {id, name}[] stored plain strings —
-    // drop those entries' grounding rather than crash rendering a Link with no id.
-    return parsed.map((t) => ({
-      ...t,
-      groundedOn: Array.isArray(t.groundedOn) ? t.groundedOn.filter((g): g is GroundedProject => typeof g === "object" && g !== null && "id" in g) : [],
-    }));
-  } catch {
-    return [];
-  }
-}
-
 const SUGGESTIONS = [
   "What needs my attention today?",
   "Show me all overdue projects",
@@ -43,19 +22,22 @@ const SUGGESTIONS = [
 ];
 
 export function AskAIPage() {
-  const { user } = useAuth();
   const query = useAIQuery();
   const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<Turn[]>(() => readStoredTurns(user?.id));
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Delete previously persisted AI discussions. New conversations remain in
+  // memory only and are discarded when the page is closed or the user logs out.
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey(user?.id), JSON.stringify(turns));
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("ai-chat-")) localStorage.removeItem(key);
+      }
     } catch {
-      // localStorage can throw in private-browsing contexts — chat still works, just won't persist
+      // Storage can be inaccessible; the chat still works entirely in memory.
     }
-  }, [turns, user?.id]);
+  }, []);
 
   async function ask(q: string) {
     if (!q.trim() || query.isPending) return;
