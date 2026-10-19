@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import type { ProjectDetail } from "../lib/types";
 
 export interface DailyBriefResult {
   brief: string;
@@ -45,7 +44,7 @@ export function useConfirmNote(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (message: string) =>
-      (await api.post<ProjectDetail>(`/ai/projects/${projectId}/confirm-note`, { message })).data,
+      (await api.post<{ success: boolean; projectId: string }>(`/ai/projects/${projectId}/confirm-note`, { message })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
