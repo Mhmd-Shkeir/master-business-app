@@ -18,8 +18,8 @@ function csvCell(value: string): string {
   // Spreadsheet applications can treat CSV cells beginning with these
   // characters as formulas. Explicitly make untrusted project/customer names
   // plain text before RFC-style quote escaping.
-  const plainText = /^[\\s\\u0000-\\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
-  return /[",\\r\\n]/.test(plainText) ? `"${plainText.replace(/"/g, '""')}"` : plainText;
+  const plainText = /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? `'${value}` : value;
+  return /[",\r\n]/.test(plainText) ? `"${plainText.replace(/"/g, '""')}"` : plainText;
 }
 
 function exportProjectsCsv(projects: ProjectSummary[]) {
