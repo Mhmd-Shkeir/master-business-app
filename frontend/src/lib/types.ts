@@ -46,7 +46,7 @@ export interface ProjectSummary {
   supplier: { id: string; name: string; country: string | null } | null;
   financial: Financial | null;
   needsAttention: NeedsAttention;
-  shipmentHoldOverridden: boolean;
+  shipmentHoldOverridden?: boolean;
 }
 
 export interface Activity {
