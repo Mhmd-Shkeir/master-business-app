@@ -1,0 +1,31 @@
+name: Figma Production Smoke
+
+on:
+  push:
+    branches: ["seqa/figma-all-screens"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify frontend routes survive refresh on Vercel
+        run: |
+          set -euo pipefail
+          for path in / /login /projects /payments /ai /profile; do
+            echo "Checking public SPA route: $path"
+            curl --fail --silent --show-error --location --retry 2 --max-time 30 \
+              "https://master-business-frontend.vercel.app${path}" \
+              | grep -q '<div id="root"'
+          done
+      - name: Verify Express API and Postgres connectivity
+        run: |
+          set -euo pipefail
+          response=$(curl --fail --silent --show-error --location --retry 2 --max-time 30 \
+            "https://master-business-app-gilt.vercel.app/api/health")
+          echo "$response" | jq -e '.status == "ok" and .db == "connected"' >/dev/null
+          echo "Backend and database OK"
