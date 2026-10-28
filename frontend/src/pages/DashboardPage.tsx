@@ -545,7 +545,7 @@ export function DashboardPage() {
   const kpiGridCols = "grid-cols-[repeat(auto-fit,minmax(180px,1fr))]";
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <header className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -695,7 +695,7 @@ export function DashboardPage() {
           Needs My Attention {isLoading ? "" : `(${attention.length})`}
         </h2>
         {attention.length === 0 && !isLoading ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-400">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center sm:p-8 text-sm text-neutral-400">
             <CheckCircleIcon className="h-6 w-6 text-emerald-500" />
             Nothing needs attention right now.
           </div>
