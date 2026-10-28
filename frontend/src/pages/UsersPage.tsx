@@ -54,13 +54,13 @@ export function UsersPage() {
   };
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader title="Users" subtitle="Manage internal team accounts and roles" />
 
       {error && <ErrorState message="Failed to load users." onRetry={() => refetch()} />}
 
       {!isLoading && (users?.length ?? 0) > 0 && (
-        <div className="mb-6 grid grid-cols-3 gap-4 sm:max-w-lg">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 sm:max-w-lg">
           {(["ADMIN", "SALES", "PROCUREMENT"] as const).map((r) => (
             <div key={r} className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
               <div className="mb-1 flex items-start justify-between">
