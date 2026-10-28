@@ -100,7 +100,7 @@ export function PaymentsPage() {
   const showPayables = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader title="Payments" subtitle="Track receivables and payables across active projects" />
 
       {isLoading && <p className="text-sm text-neutral-400">Loading...</p>}
