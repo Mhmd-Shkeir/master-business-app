@@ -21,7 +21,7 @@ export function CustomersPage() {
   const deleteCustomer = useDeleteCustomer();
   const canManage = user?.role === "ADMIN" || user?.role === "SALES";
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(true);
   const [newCustomer, setNewCustomer] = useState({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
   const [createError, setCreateError] = useState<string | null>(null);
 
