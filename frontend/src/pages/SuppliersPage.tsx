@@ -21,7 +21,7 @@ export function SuppliersPage() {
   const deleteSupplier = useDeleteSupplier();
   const canManage = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(true);
   const [newSupplier, setNewSupplier] = useState({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -90,7 +90,7 @@ export function SuppliersPage() {
   }
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader
         title="Suppliers"
         subtitle="Manage supplier accounts and sourcing relationships"

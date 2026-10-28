@@ -40,7 +40,7 @@ export function NewProjectPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-xl px-8 py-6">
+    <div className="animate-fade-in mx-auto max-w-xl px-4 py-5 sm:px-8 sm:py-6">
       <Link to="/" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to dashboard
       </Link>

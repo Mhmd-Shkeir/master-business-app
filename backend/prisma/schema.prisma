@@ -5,7 +5,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
+  // Vercel Prisma Postgres supplies DATABASE_URL for both runtime and migrations.
+  directUrl = env("DATABASE_URL")
 }
 
 enum Role {

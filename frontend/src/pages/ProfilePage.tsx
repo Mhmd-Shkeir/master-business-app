@@ -69,7 +69,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-xl px-8 py-6">
+    <div className="animate-fade-in mx-auto max-w-xl px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader title="My Profile" subtitle="Manage your account settings" />
 
       <div className="mb-6 rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm">

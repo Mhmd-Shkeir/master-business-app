@@ -21,7 +21,7 @@ export function CustomersPage() {
   const deleteCustomer = useDeleteCustomer();
   const canManage = user?.role === "ADMIN" || user?.role === "SALES";
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(true);
   const [newCustomer, setNewCustomer] = useState({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -90,7 +90,7 @@ export function CustomersPage() {
   }
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader
         title="Customers"
         subtitle="Manage customer accounts and relationships"

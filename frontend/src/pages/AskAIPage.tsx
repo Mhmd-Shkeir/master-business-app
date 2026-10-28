@@ -63,7 +63,7 @@ export function AskAIPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto flex min-h-[70vh] max-w-3xl flex-col px-8 py-6">
+    <div className="animate-fade-in mx-auto flex min-h-[70vh] max-w-3xl flex-col px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader
         title={
           <span className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export function AskAIPage() {
 
       <div className="flex-1 space-y-4 overflow-y-auto pb-4">
         {turns.length === 0 && (
-          <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+          <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center sm:p-8">
             <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
               <SparkleIcon className="h-5 w-5" />
             </span>
