@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { authenticate } from "../../middleware/auth";
+import { aiRateLimit } from "../../middleware/rate-limit";
 import { AppError } from "../projects/projects.service";
 import { buildDailyBrief, draftFollowUpEmail, recordNote, runQuery } from "./ai.service";
 
@@ -14,7 +15,7 @@ async function currentUser(userId: string) {
   return user;
 }
 
-aiRouter.post("/daily-brief", async (req, res) => {
+aiRouter.post("/daily-brief", aiRateLimit, async (req, res) => {
   try {
     const user = await currentUser(req.user!.id);
     const result = await buildDailyBrief(user);
@@ -27,7 +28,7 @@ aiRouter.post("/daily-brief", async (req, res) => {
 
 const querySchema = z.object({ question: z.string().trim().min(1).max(2000) }).strict();
 
-aiRouter.post("/query", async (req, res) => {
+aiRouter.post("/query", aiRateLimit, async (req, res) => {
   const parsed = querySchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   try {
@@ -42,7 +43,7 @@ aiRouter.post("/query", async (req, res) => {
 
 const draftSchema = z.object({ instructions: z.string().max(2000).optional() }).strict();
 
-aiRouter.post("/projects/:id/draft-email", async (req, res) => {
+aiRouter.post("/projects/:id/draft-email", aiRateLimit, async (req, res) => {
   const parsed = draftSchema.safeParse(req.body ?? {});
   if (!parsed.success) return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   try {
@@ -57,7 +58,7 @@ aiRouter.post("/projects/:id/draft-email", async (req, res) => {
 
 const confirmSchema = z.object({ message: z.string().trim().min(1).max(5000) }).strict();
 
-aiRouter.post("/projects/:id/confirm-note", async (req, res) => {
+aiRouter.post("/projects/:id/confirm-note", aiRateLimit, async (req, res) => {
   const parsed = confirmSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   try {

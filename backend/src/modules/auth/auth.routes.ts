@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { authenticate, signToken } from "../../middleware/auth";
 import { loginRateLimit } from "../../middleware/login-rate-limit";
+import { passwordRateLimit } from "../../middleware/rate-limit";
 
 export const authRouter = Router();
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-user-placeholder", 10);
@@ -52,7 +53,7 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8),
 });
 
-authRouter.patch("/password", authenticate, async (req, res) => {
+authRouter.patch("/password", authenticate, passwordRateLimit, async (req, res) => {
   const parsed = changePasswordSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
