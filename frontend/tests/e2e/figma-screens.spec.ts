@@ -99,7 +99,7 @@ async function boot(page: Page, role?: Role) {
       body: "Hello,\nPlease send a status update.\nThank you.",
     };
     else if (method === "POST" && path === "/projects") {
-      status = 201; body = { ...base, id: "new" };
+      status = 201; body = { ...base, id: "created-qa-01" };
     }
     else if (method === "POST" && path.includes("payment")) body = { success:true };
     else if (method === "POST" && path.includes("expenses")) body = { success:true };
@@ -166,7 +166,13 @@ for (const screen of [...desktop, ...mobile]) {
     if (screen.action === "override") await page.getByRole("button", {name:"Admin Override"}).click();
     if (screen.action === "drawer") await page.getByRole("button", {name:"Open menu"}).click();
     const key = screen.expected;
-    await expect(page.getByText(key, {exact:false}).first()).toBeVisible();
+    if (screen.figma === "10") {
+      await expect(page.getByPlaceholder(/Reason for overriding/)).toBeVisible();
+    } else if (screen.figma === "M03") {
+      await expect(page.getByPlaceholder(/Search projects or customers/)).toBeVisible();
+    } else {
+      await expect(page.getByText(key, {exact:false}).first()).toBeVisible();
+    }
     if (screen.figma === "11") await expect(page.getByText("Supplier / Cost")).toHaveCount(0);
     if (screen.figma === "12") await expect(page.getByText("Customer / Revenue")).toHaveCount(0);
     if (screen.figma === "M03") {
@@ -187,7 +193,7 @@ test("Create RFQ form submits real validated fields", async ({page}) => {
   await page.getByText("Customer", {exact:true}).locator("..").locator("select").selectOption("c1");
   await page.getByText("Est. Revenue (rough ask)").locator("..").locator("input").fill("100");
   await page.getByRole("button",{name:"Create Project"}).click();
-  await expect(page).toHaveURL(/\/projects\/new$/);
+  await expect(page).toHaveURL(/\/projects\/created-qa-01$/);
 });
 
 test("Admin and Procurement navigation do not leak restricted tabs", async ({page}) => {
