@@ -90,7 +90,7 @@ export function SuppliersPage() {
   }
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader
         title="Suppliers"
         subtitle="Manage supplier accounts and sourcing relationships"
