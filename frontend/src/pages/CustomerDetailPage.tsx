@@ -62,7 +62,7 @@ export function CustomerDetailPage() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-4xl px-8 py-6">
+    <div className="animate-fade-in mx-auto max-w-4xl px-4 py-5 sm:px-8 sm:py-6">
       <Link to="/customers" className="mb-4 inline-block text-sm text-neutral-500 hover:underline">
         &larr; Back to customers
       </Link>
@@ -137,7 +137,7 @@ export function CustomerDetailPage() {
         )}
         {saveError && <p className="mb-4 text-sm text-red-600">{saveError}</p>}
 
-        <div className="mb-6 grid grid-cols-3 gap-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4 text-sm">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4 text-sm">
           <div>
             <p className="text-neutral-400">Projects</p>
             <p className="text-xl font-semibold">{relatedProjects.length}</p>
