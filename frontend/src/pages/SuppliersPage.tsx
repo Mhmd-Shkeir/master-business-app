@@ -21,7 +21,7 @@ export function SuppliersPage() {
   const deleteSupplier = useDeleteSupplier();
   const canManage = user?.role === "ADMIN" || user?.role === "PROCUREMENT";
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(true);
   const [newSupplier, setNewSupplier] = useState({ name: "", contactName: "", contactEmail: "", country: "", paymentTerms: "" });
   const [createError, setCreateError] = useState<string | null>(null);
 
