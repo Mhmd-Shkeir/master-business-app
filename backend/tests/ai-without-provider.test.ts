@@ -42,7 +42,7 @@ describe("Figma AI panels without a provider", () => {
     const response = await buildDailyBrief({ id: "admin", name: "Admin", role: "ADMIN" });
     expect(response.brief).toContain("Office Furniture");
     expect(response.brief).toContain("overdue");
-    expect(response.brief).toContain("not AI");
+    expect(response.brief).toContain("no AI provider configured");
   });
 
   it("answers overdue queries and links to actual projects", async () => {
