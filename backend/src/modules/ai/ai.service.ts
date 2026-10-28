@@ -94,6 +94,21 @@ export async function buildDailyBrief(user: AuthUser & { name: string }) {
     return { brief: "Nothing needs attention today — all projects are on track.", generatedAt: new Date().toISOString() };
   }
 
+  if (!aiConfigured) {
+    const lines = flagged.map(p => {
+      const reasons = [
+        p.flags.overdue && "overdue",
+        p.flags.missingNextAction && "missing next action",
+        p.flags.lowMargin && "low margin",
+        p.flags.blockedShipment && "shipment hold",
+      ].filter(Boolean).join(", ");
+      return `- ${p.projectName} (${p.status}): ${reasons || "requires attention"}`;
+    });
+    return {
+      brief: `Business summary (automatic; no AI provider configured):\n${lines.join("\n")}`,
+      generatedAt: new Date().toISOString(),
+    };
+  }
   const client = getClient();
   const response = await client.chat.completions.create({
     model: env.AI_MODEL_ID!,
@@ -276,6 +291,51 @@ function groundedProjectsMentionedIn(answer: string, candidates: Map<string, str
 }
 
 export async function runQuery(question: string, user: AuthUser & { name: string }) {
+  if (!aiConfigured) {
+    const q = question.toLowerCase().trim();
+    // Authorization precedes all filtering and uses the same role rules as the
+    // live AI tool interface. The fallback never estimates protected figures.
+    if (
+      (user.role !== "ADMIN" && /margin|profit/.test(q)) ||
+      (!canSeeCost(user.role) && /cost|supplier payment|payables/.test(q)) ||
+      (!canSeeRevenue(user.role) && /revenue|customer payment|receivables|customer balance/.test(q))
+    ) return { answer: "That information is not available to your role.", groundedOn: [] };
+    const result = await toolListProjects({ limit: 50 }, user);
+    let matches = result.projects;
+    if (/overdue|late|past due/.test(q)) matches = matches.filter(p => p.needsAttention.overdue);
+    else if (/low.margin|margin.*20/.test(q)) matches = matches.filter(p => p.needsAttention.lowMargin);
+    else if (/missing next action|without next action/.test(q)) matches = matches.filter(p => p.needsAttention.missingNextAction);
+    else if (/shipment hold|blocked|outstanding/.test(q)) matches = matches.filter(p => p.needsAttention.blockedShipment);
+    else if (/needs? (my )?attention|priority|urgent|at risk/.test(q)) matches = matches.filter(p => p.needsAttention.any);
+    else {
+      const stage = (["RFQ","QUOTED","ORDERED","SHIPPING","CLOSED"] as const)
+        .find(st => q.includes(st.toLowerCase()) || (st === "RFQ" && q.includes("request for quotation")));
+      if (stage) matches = matches.filter(p => p.status === stage);
+      else {
+        const named = matches.filter(p =>
+          q.includes(p.projectName.toLowerCase()) ||
+          (p.customer && q.includes(p.customer.toLowerCase()))
+        );
+        if (named.length) matches = named;
+      }
+    }
+    const summary = matches.map(p => {
+      const reasons = [
+        p.needsAttention.overdue && "overdue",
+        p.needsAttention.missingNextAction && "missing next action",
+        p.needsAttention.lowMargin && "low margin",
+        p.needsAttention.blockedShipment && "shipment hold",
+      ].filter(Boolean);
+      return `- ${p.projectName} (${p.status})${reasons.length ? ` — ${reasons.join(", ")}` : ""}`;
+    });
+    const header = "Live business search (AI provider not configured).";
+    return {
+      answer: matches.length
+        ? `${header}\n${matches.length} matching project(s):\n${summary.join("\n")}`
+        : `${header}\nNo matching projects. Try a status, overdue, attention, or a project name.`,
+      groundedOn: matches.map(p => ({ id: p.id, name: p.projectName })),
+    };
+  }
   const client = getClient();
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: baseSystemPrompt(user) },
@@ -365,6 +425,23 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
     recentActivity: safeActivities.map((a) => a.message),
   };
 
+  if (!aiConfigured) {
+    const recipient = customerFacing
+      ? (project.customer.contactName || project.customer.name)
+      : (project.supplier?.contactName || project.supplier?.name || "Supplier Team");
+    const action = project.nextAction?.trim() || "the next steps";
+    const body = [
+      `Hello ${recipient},`,
+      "",
+      `I am following up on ${project.projectName} (currently ${project.status}).`,
+      `Could you please share an update regarding ${action}?`,
+      instructions?.trim() ? `Additional note: ${instructions.trim().slice(0, 500)}` : "",
+      "",
+      "Thank you,",
+      user.name,
+    ].join("\n");
+    return { subject: `Follow-up: ${project.projectName}`, body };
+  }
   const client = getClient();
   const response = await client.chat.completions.create({
     model: env.AI_MODEL_ID!,
