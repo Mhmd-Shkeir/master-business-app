@@ -225,7 +225,7 @@ test("Payment can be recorded from Figma Payments table", async ({page}) => {
   await page.goto("/payments");
   await page.getByRole("button",{name:"Record payment"}).first().click();
   await page.getByPlaceholder("Amount").fill("100");
-  await page.getByRole("button",{name:"Record Payment"}).click();
+  await page.getByRole("button",{name:"Record Payment",exact:true}).click();
   await expect(page.getByPlaceholder("Amount")).toHaveCount(0);
 });
 
