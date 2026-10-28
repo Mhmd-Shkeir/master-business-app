@@ -202,3 +202,57 @@ test("Admin and Procurement navigation do not leak restricted tabs", async ({pag
   await expect(page.getByRole("link",{name:"Customers",exact:true})).toHaveCount(0);
   await expect(page.getByRole("link",{name:"Users",exact:true})).toHaveCount(0);
 });
+
+
+test("Customer creation form posts and closes on success", async ({page}) => {
+  await boot(page,"SALES");
+  await page.goto("/customers");
+  await page.getByPlaceholder("Name", {exact:true}).fill("New Customer");
+  await page.getByRole("button",{name:"Create Customer"}).click();
+  await expect(page.getByPlaceholder("Name", {exact:true})).toHaveCount(0);
+});
+
+test("Supplier creation form posts and closes on success", async ({page}) => {
+  await boot(page,"PROCUREMENT");
+  await page.goto("/suppliers");
+  await page.getByPlaceholder("Name", {exact:true}).fill("New Supplier");
+  await page.getByRole("button",{name:"Create Supplier"}).click();
+  await expect(page.getByPlaceholder("Name", {exact:true})).toHaveCount(0);
+});
+
+test("Payment can be recorded from Figma Payments table", async ({page}) => {
+  await boot(page,"ADMIN");
+  await page.goto("/payments");
+  await page.getByRole("button",{name:"Record payment"}).first().click();
+  await page.getByPlaceholder("Amount").fill("100");
+  await page.getByRole("button",{name:"Record Payment"}).click();
+  await expect(page.getByPlaceholder("Amount")).toHaveCount(0);
+});
+
+test("Ask My Business displays grounded answers and project links", async ({page}) => {
+  await boot(page,"ADMIN");
+  await page.goto("/ai");
+  await page.getByRole("button",{name:"Show me all overdue projects"}).click();
+  await expect(page.getByText("Acme Office Furniture Batch 3 is overdue.")).toBeVisible();
+  await expect(page.getByRole("link",{name:"Acme Office Furniture Batch 3"})).toBeVisible();
+});
+
+test("Follow-up draft requires human confirmation before recording", async ({page}) => {
+  await boot(page,"ADMIN");
+  await page.goto("/projects/p1");
+  await page.getByRole("button",{name:"Draft Follow-up Email"}).click();
+  await expect(page.getByText("Review and edit before confirming")).toBeVisible();
+  await page.getByRole("button",{name:"Edit and Confirm"}).click();
+  await expect(page.getByText("Recorded to the Activity Timeline below.")).toBeVisible();
+});
+
+test("Admin override requires written reason", async ({page}) => {
+  await boot(page,"ADMIN");
+  await page.goto("/projects/p1");
+  await page.getByRole("button",{name:"Admin Override"}).click();
+  const reason=page.getByPlaceholder(/Reason for overriding/);
+  await expect(page.getByRole("button",{name:"Confirm Override"})).toBeDisabled();
+  await reason.fill("Approved by finance after review.");
+  await page.getByRole("button",{name:"Confirm Override"}).click();
+  await expect(reason).toHaveCount(0);
+});
