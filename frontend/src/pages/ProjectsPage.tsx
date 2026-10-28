@@ -58,7 +58,7 @@ export function ProjectsPage() {
   });
 
   return (
-    <div className="animate-fade-in w-full px-8 py-6">
+    <div className="animate-fade-in w-full px-4 py-5 sm:px-8 sm:py-6">
       <PageHeader
         title="Projects"
         subtitle="Manage customer requests, quotations, orders, shipping, and closed projects"
