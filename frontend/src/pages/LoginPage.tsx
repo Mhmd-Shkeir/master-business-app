@@ -78,7 +78,7 @@ export function LoginPage() {
           </button>
         </form>
 
-        {import.meta.env.DEV && (
+        {(
         <div className="mt-6 border-t border-neutral-100 pt-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Demo Accounts</p>
           <div className="space-y-1">
@@ -91,7 +91,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => {
                     setEmail(acc.email);
-                    setPassword("password123");
+                    if (import.meta.env.DEV) setPassword("password123");
                   }}
                   className="shrink-0 rounded border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50"
                 >
@@ -101,7 +101,7 @@ export function LoginPage() {
             ))}
           </div>
           <p className="mt-2 px-1.5 text-[11px] text-neutral-400">
-            Demo password: <span className="font-mono">password123</span>
+            {import.meta.env.DEV ? (<>Local demo password: <span className="font-mono">password123</span></>) : "Choose an account above, then enter its temporary password."}
           </p>
         </div>
         )}
