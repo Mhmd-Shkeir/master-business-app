@@ -134,6 +134,8 @@ projectsRouter.post("/", requireRole("ADMIN", "SALES"), async (req, res) => {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   }
   const data = parsed.data;
+  const customer = await prisma.customer.findUnique({ where: { id: data.customerId }, select: { id: true } });
+  if (!customer) return res.status(400).json({ error: "Customer not found" });
 
   const project = await prisma.project.create({
     data: {
@@ -196,8 +198,9 @@ projectsRouter.patch("/:id/status", async (req, res) => {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   }
   try {
-    const updated = await transitionProjectStatus(req.params.id, parsed.data.status, req.user!);
-    res.json(updated);
+    await transitionProjectStatus(req.params.id, parsed.data.status, req.user!);
+    const updated = await loadProjectById(req.params.id);
+    res.json(serializeProject(updated, req.user!.role));
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -216,8 +219,9 @@ projectsRouter.post("/:id/override-hold", requireRole("ADMIN"), async (req, res)
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   }
   try {
-    const updated = await overrideShipmentHold(req.params.id, req.user!, parsed.data.reason);
-    res.json(updated);
+    await overrideShipmentHold(req.params.id, req.user!, parsed.data.reason);
+    const updated = await loadProjectById(req.params.id);
+    res.json(serializeProject(updated, req.user!.role));
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -258,7 +262,7 @@ projectsRouter.post("/:id/payment", async (req, res) => {
 
 const addExpenseSchema = z
   .object({
-    category: z.string().min(1),
+    category: z.string().trim().min(1),
     amount: z.coerce.number().positive(),
     note: z.string().optional(),
   })

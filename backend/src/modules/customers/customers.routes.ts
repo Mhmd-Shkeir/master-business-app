@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { authenticate, requireRole } from "../../middleware/auth";
@@ -64,6 +65,14 @@ customersRouter.delete("/:id", requireRole("ADMIN", "SALES"), async (req, res) =
   if (projectCount > 0) {
     return res.status(409).json({ error: `Cannot delete: ${projectCount} project(s) still reference this customer` });
   }
-  await prisma.customer.delete({ where: { id: req.params.id } });
+  try {
+    await prisma.customer.delete({ where: { id: req.params.id } });
+  } catch (err) {
+    // A project may have been linked after the check above; the database still refuses the delete.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2003" || err.code === "P2014")) {
+      return res.status(409).json({ error: "Cannot delete: projects still reference this customer" });
+    }
+    throw err;
+  }
   res.status(204).send();
 });

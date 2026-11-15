@@ -80,7 +80,7 @@ authRouter.patch("/password", authenticate, passwordRateLimit, async (req, res) 
   res.json({ success: true, token: signToken(updated) });
 });
 
-const updateProfileSchema = z.object({ name: z.string().min(1) }).strict();
+const updateProfileSchema = z.object({ name: z.string().trim().min(1) }).strict();
 
 authRouter.patch("/profile", authenticate, async (req, res) => {
   const parsed = updateProfileSchema.safeParse(req.body);

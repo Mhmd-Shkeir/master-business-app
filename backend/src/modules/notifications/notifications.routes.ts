@@ -24,6 +24,8 @@ notificationsRouter.post("/dismiss-overdue", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
   }
+  const project = await prisma.project.findUnique({ where: { id: parsed.data.projectId }, select: { id: true } });
+  if (!project) return res.status(404).json({ error: "Project not found" });
   await prisma.notificationDismissal.upsert({
     where: { userId_projectId: { userId: req.user!.id, projectId: parsed.data.projectId } },
     create: { userId: req.user!.id, projectId: parsed.data.projectId },

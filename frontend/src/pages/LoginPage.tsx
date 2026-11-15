@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
@@ -26,8 +27,12 @@ export function LoginPage() {
       const res = await api.post<{ token: string; user: AuthUser }>("/auth/login", { email, password });
       login(res.data.token, res.data.user);
       navigate("/");
-    } catch {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err) && err.response?.status === 429
+          ? "Too many sign-in attempts. Try again later."
+          : "Invalid email or password",
+      );
     } finally {
       setLoading(false);
     }

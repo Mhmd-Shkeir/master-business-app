@@ -247,6 +247,10 @@ export async function updateProject(projectId: string, patch: ProjectUpdateInput
     // (ADMIN + PROCUREMENT), the same rule already used for cost-side visibility.
     if (patch.supplierId !== undefined && canSeeCost(user.role)) {
       anyPermittedFieldProvided = true;
+      if (patch.supplierId && patch.supplierId !== project.supplierId) {
+        const supplier = await tx.supplier.findUnique({ where: { id: patch.supplierId }, select: { id: true } });
+        if (!supplier) throw new AppError("Supplier not found", 400);
+      }
       if (patch.supplierId !== project.supplierId) {
         // First-time assignment (not a reassignment of an existing supplier) must come with
         // a real cost — otherwise a supplier can sit "assigned" indefinitely with $0 cost,

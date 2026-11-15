@@ -848,7 +848,7 @@ export function ProjectDetailPage() {
         {/* Workflow transition controls */}
         {!editing && project.status !== "CLOSED" && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            {nextStage && (
+            {nextStage && !(user?.role === "PROCUREMENT" && nextStage === "CLOSED") && (
               <button
                 type="button"
                 onClick={() => attemptTransition(nextStage)}

@@ -68,7 +68,7 @@ function baseSystemPrompt(user: AuthUser & { name: string }): string {
 // Daily Brief — deterministic data fetch, no tool-calling needed.
 // ---------------------------------------------------------------------------
 
-export async function buildDailyBrief(user: AuthUser & { name: string }) {
+async function buildDailyBriefCore(user: AuthUser & { name: string }, providerDown = false) {
   const projects = await prisma.project.findMany({ include: PROJECT_INCLUDE, orderBy: { dueDate: "asc" } });
 
   const flagged = projects
@@ -94,7 +94,7 @@ export async function buildDailyBrief(user: AuthUser & { name: string }) {
     return { brief: "Nothing needs attention today — all projects are on track.", generatedAt: new Date().toISOString() };
   }
 
-  if (!aiConfigured) {
+  if (!aiConfigured || providerDown) {
     const lines = flagged.map(p => {
       const reasons = [
         p.flags.overdue && "overdue",
@@ -105,7 +105,7 @@ export async function buildDailyBrief(user: AuthUser & { name: string }) {
       return `- ${p.projectName} (${p.status}): ${reasons || "requires attention"}`;
     });
     return {
-      brief: `Business summary (automatic; no AI provider configured):\n${lines.join("\n")}`,
+      brief: `Business summary (automatic; ${providerDown ? "AI provider unavailable" : "no AI provider configured"}):\n${lines.join("\n")}`,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -290,8 +290,8 @@ function groundedProjectsMentionedIn(answer: string, candidates: Map<string, str
   return [...candidates].filter(([, name]) => lower.includes(name.toLowerCase())).map(([id, name]) => ({ id, name }));
 }
 
-export async function runQuery(question: string, user: AuthUser & { name: string }) {
-  if (!aiConfigured) {
+async function runQueryCore(question: string, user: AuthUser & { name: string }, providerDown = false) {
+  if (!aiConfigured || providerDown) {
     const q = question.toLowerCase().trim();
     // Authorization precedes all filtering and uses the same role rules as the
     // live AI tool interface. The fallback never estimates protected figures.
@@ -328,7 +328,7 @@ export async function runQuery(question: string, user: AuthUser & { name: string
       ].filter(Boolean);
       return `- ${p.projectName} (${p.status})${reasons.length ? ` — ${reasons.join(", ")}` : ""}`;
     });
-    const header = "Live business search (AI provider not configured).";
+    const header = providerDown ? "Live business search (AI provider unavailable)." : "Live business search (AI provider not configured).";
     return {
       answer: matches.length
         ? `${header}\n${matches.length} matching project(s):\n${summary.join("\n")}`
@@ -396,7 +396,7 @@ export async function runQuery(question: string, user: AuthUser & { name: string
 // Draft a follow-up email for one project.
 // ---------------------------------------------------------------------------
 
-export async function draftFollowUpEmail(projectId: string, instructions: string | undefined, user: AuthUser & { name: string }) {
+async function draftFollowUpEmailCore(projectId: string, instructions: string | undefined, user: AuthUser & { name: string }, providerDown = false) {
   const project = await prisma.project.findUnique({ where: { id: projectId }, include: PROJECT_INCLUDE });
   if (!project) throw new AppError("Project not found", 404);
 
@@ -425,7 +425,7 @@ export async function draftFollowUpEmail(projectId: string, instructions: string
     recentActivity: safeActivities.map((a) => a.message),
   };
 
-  if (!aiConfigured) {
+  if (!aiConfigured || providerDown) {
     const recipient = customerFacing
       ? (project.customer.contactName || project.customer.name)
       : (project.supplier?.contactName || project.supplier?.name || "Supplier Team");
@@ -502,4 +502,36 @@ export async function recordNote(projectId: string, message: string, user: AuthU
     // Do not send Prisma's raw project, financials or expenses to the browser.
     return { success: true };
   });
+}
+
+// If the AI provider is configured but fails (network, key, quota), answer with the
+// labelled automatic version instead of an error 500. Authorization errors still propagate.
+export async function buildDailyBrief(user: AuthUser & { name: string }) {
+  try {
+    return await buildDailyBriefCore(user);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error("AI provider failed for the Daily Brief:", err instanceof Error ? err.name : "unknown");
+    return buildDailyBriefCore(user, true);
+  }
+}
+
+export async function runQuery(question: string, user: AuthUser & { name: string }) {
+  try {
+    return await runQueryCore(question, user);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error("AI provider failed for a query:", err instanceof Error ? err.name : "unknown");
+    return runQueryCore(question, user, true);
+  }
+}
+
+export async function draftFollowUpEmail(projectId: string, instructions: string | undefined, user: AuthUser & { name: string }) {
+  try {
+    return await draftFollowUpEmailCore(projectId, instructions, user);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error("AI provider failed for an email draft:", err instanceof Error ? err.name : "unknown");
+    return draftFollowUpEmailCore(projectId, instructions, user, true);
+  }
 }
