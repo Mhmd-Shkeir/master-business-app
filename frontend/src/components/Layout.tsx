@@ -43,7 +43,7 @@ function NavLink({
       to={to}
       onClick={onNavigate}
       title={collapsed ? children : undefined}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors xl:text-sm ${
         active ? "bg-indigo-600 text-white shadow-sm shadow-indigo-900/30" : "text-neutral-400 hover:bg-white/5 hover:text-white"
       } ${collapsed ? "md:justify-center" : ""}`}
     >
@@ -89,15 +89,15 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950 transition-transform duration-200 md:relative md:translate-x-0 md:transition-[width] md:duration-150 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } ${collapsed ? "md:w-[68px]" : "md:w-64"}`}
+        } ${collapsed ? "md:w-[68px]" : "md:w-60 xl:w-64"}`}
       >
-        <div className="flex items-center justify-between gap-2 px-4 py-4">
+        <div className="flex items-center justify-between gap-2 px-3 py-4 xl:px-4">
           <Link to="/" onClick={closeMobile} className="flex items-center gap-2.5 overflow-hidden">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-sm font-bold text-white shadow-sm">
               M
             </span>
             <span className={`whitespace-nowrap leading-tight ${collapsed ? "md:hidden" : ""}`}>
-              <span className="block text-sm font-semibold text-white">Master Business</span>
+              <span className="block text-[13px] font-semibold text-white xl:text-sm">Master Business</span>
               <span className="block text-xs text-neutral-500">Management</span>
             </span>
           </Link>
