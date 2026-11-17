@@ -391,7 +391,7 @@ function AttentionSummaryCard({
             {segments.map((s, i) => (
               <span key={s.text}>
                 {i > 0 && <span className="text-neutral-300"> · </span>}
-                <span className={s.className}>{s.text}</span>
+                <span className={`whitespace-nowrap ${s.className}`}>{s.text}</span>
               </span>
             ))}
           </p>
@@ -551,7 +551,7 @@ export function DashboardPage() {
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">
               {greeting()}, {user?.name.split(" ")[0]}
-              <span className="ml-2 font-normal text-neutral-400">— {formatLongDate()}</span>
+              <span className="ml-2 whitespace-nowrap font-normal text-neutral-400">— {formatLongDate()}</span>
             </h1>
             <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
           </div>

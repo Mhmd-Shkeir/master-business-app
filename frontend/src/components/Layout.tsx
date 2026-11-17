@@ -56,7 +56,10 @@ function NavLink({
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  // On tablet widths (768-1023px) the full sidebar leaves too little room for the page, so it starts as the icon rail.
+  const [collapsed, setCollapsed] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px) and (max-width: 1023px)").matches,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const iconClass = "h-5 w-5";
 
@@ -211,9 +214,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <NotificationBell buttonClassName="text-neutral-500 hover:bg-neutral-100" align="right" />
         </div>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        {/* One shared maximum width, so pages do not stretch edge to edge on large or zoomed-out screens. */}
+        <main className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+        </main>
         <footer className="border-t border-neutral-200 bg-white">
-          <div className="flex flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-2 px-6 py-4 text-xs text-neutral-400 sm:flex-row">
             <p className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span>&copy; {new Date().getFullYear()} Master Business Management</span>
               <span className="text-neutral-300">·</span>
