@@ -26,3 +26,19 @@ body {
 .animate-fade-in {
   animation: fade-in 0.25s ease-out;
 }
+
+/* Visible keyboard focus on every interactive element. */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Respect the system setting for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
