@@ -386,12 +386,11 @@ function AttentionSummaryCard({
     <div className="rounded-xl border border-neutral-200/70 bg-white p-4 shadow-sm">
       <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">Needs My Attention</h2>
       {hasAttention ? (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold">
-            {segments.map((s, i) => (
-              <span key={s.text}>
-                {i > 0 && <span className="text-neutral-300"> · </span>}
-                <span className={`whitespace-nowrap ${s.className}`}>{s.text}</span>
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <p className="flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 text-sm font-semibold">
+            {segments.map((s) => (
+              <span key={s.text} className={`whitespace-nowrap ${s.className}`}>
+                {s.text}
               </span>
             ))}
           </p>
@@ -551,7 +550,10 @@ export function DashboardPage() {
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">
               {greeting()}, {user?.name.split(" ")[0]}
-              <span className="ml-2 whitespace-nowrap font-normal text-neutral-400">— {formatLongDate()}</span>
+              <span className="block whitespace-nowrap text-base font-normal text-neutral-400 xl:ml-2 xl:inline xl:text-lg">
+                <span className="hidden xl:inline">— </span>
+                {formatLongDate()}
+              </span>
             </h1>
             <p className="text-sm text-neutral-400">{SUBTITLE[user?.role ?? ""] ?? "Overview"}</p>
           </div>

@@ -24,3 +24,11 @@ Checked: at 2860 px every page content is capped at 1600 px; at 800 px the sideb
 - Backend checks to add: trim spaces-only names and categories (B1, B7); check that customer and supplier exist before saving (B3, B4); atomic customer delete (B2); no 500 for unknown project in dismiss-overdue (B8); fallback text when the AI provider fails (B9); hide `shipmentHoldOverridden` in the status response for Procurement (B5); decide on direct edit of paid amounts (B6).
 - Larger design ideas for later: a language pack for non-technical users, a login-first flow, and a mobile card layout for the wide tables (they scroll sideways at 390 px).
 - Vercel: add an Ignored Build Step to avoid hitting the deployment limit again.
+
+## Round 2 (18 Nov, from a screenshot at a zoomed browser)
+
+| ID | Bug | Fix |
+|---|---|---|
+| V7 | Needs My Attention card: dots left alone at line ends, and "Review" ran outside the card into the Daily Brief card. | Items wrap as a group with spacing, no dots; "Review" moves under the items when narrow. |
+| V8 | Dashboard greeting: "- Wednesday, November 18" broke onto its own line with a dangling dash. | Date sits on its own line below the greeting; dash only on wide screens (xl). |
+| V9 | Sidebar too wide and nav text too large at medium widths. | Sidebar 240 px (256 px from xl), nav text 13 px (14 px from xl), tighter header so "Master Business" is not cut off. |
